@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マッチ4パズルゲーム</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="container">
+        <div id="game-container"></div>
+        <div id="ui-container"></div>
+    </div>
+
+    <!-- タブバー（画面下部） -->
+    <div class="tab-bar" id="mode-tabs">
+        <button id="tab-timemode" class="tab">タイムモード</button>
+        <button id="tab-turnmode" class="tab">ターンモード</button>
+        <button id="tab-freeplay" class="tab active">フリープレイ</button>
+    </div>
+
+    <!-- ゲームロジックファイル -->
+    <script src="Piece.js"></script>
+    <script src="Grid.js"></script>
+    <script src="GameLogic.js"></script>
+    <script src="Input.js"></script>
+    <script src="MatchDetector.js"></script>
+    <script src="AnimationManager.js"></script>
+    <script src="ScoringSystem.js"></script>
+    <script src="HighscoreAPI.js"></script>
+    <script src="GameState.js"></script>
+    <script src="sketch.js"></script>
+</body>
+</html>
