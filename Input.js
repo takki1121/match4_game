@@ -27,9 +27,11 @@ class Input {
      */
     screenToGrid(screenX, screenY) {
         const { PIECE_SIZE, MARGIN } = this.config;
-        const col = Math.floor(screenX / (PIECE_SIZE + MARGIN));
-        const row = Math.floor(screenY / (PIECE_SIZE + MARGIN));
-        
+        // 描画側では各セルが left/top に MARGIN のオフセットで描かれるため
+        // 入力座標から MARGIN を引いてからセル計算を行う
+        const col = Math.floor((screenX - MARGIN) / (PIECE_SIZE + MARGIN));
+        const row = Math.floor((screenY - MARGIN) / (PIECE_SIZE + MARGIN));
+
         return { col, row };
     }
 
@@ -105,6 +107,11 @@ class Input {
         return null;
     }
 
+    // エイリアス（タッチ用に同じ引数で呼べるようにする）
+    handlePointerPressed(x, y) {
+        return this.handleMousePressed(x, y);
+    }
+
     /**
      * マウスドラッグ時の処理
      */
@@ -157,6 +164,10 @@ class Input {
         };
     }
 
+    handlePointerDragged(x, y) {
+        return this.handleMouseDragged(x, y);
+    }
+
     /**
      * マウスリリース時の処理
      */
@@ -166,6 +177,10 @@ class Input {
         this.dragStartRow = null;
         this.dragStartX = null;
         this.dragStartY = null;
+    }
+
+    handlePointerReleased() {
+        return this.handleMouseReleased();
     }
 
     /**

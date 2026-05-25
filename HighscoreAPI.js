@@ -2,6 +2,7 @@
 const HighscoreAPI = (function() {
     const STORAGE_KEY = 'match4-highscores';
     const MODES = ['timemode', 'turnmode', 'freeplay'];
+    const MAX_ENTRIES = 3; // 表示・保存するランキングの上位数
     const DEFAULT_DATA = {
         timemode: [],
         turnmode: [],
@@ -24,7 +25,7 @@ const HighscoreAPI = (function() {
                         date: item.date || new Date().toISOString()
                     }))
                     .sort((a, b) => b.score - a.score)
-                    .slice(0, 5);
+                    .slice(0, MAX_ENTRIES);
             }
         }
         return result;
@@ -64,7 +65,7 @@ const HighscoreAPI = (function() {
             score: Number(score) || 0,
             date: new Date().toISOString()
         });
-        data[mode] = data[mode].sort((a, b) => b.score - a.score).slice(0, 5);
+        data[mode] = data[mode].sort((a, b) => b.score - a.score).slice(0, MAX_ENTRIES);
         saveData(data);
 
         return Promise.resolve({ ok: true, mode, highscores: data[mode] });

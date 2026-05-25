@@ -6,11 +6,24 @@ class GameState {
         this.timeRemaining = 120; // 秒（タイムモードの初期値）
         this.turnsRemaining = 50; // ターンモードの初期値
         this.gameActive = true;
+        this.timeStarted = false; // タイムモードのカウントが開始されたか
         this._accumulator = 0; // ミリ秒蓄積（tick用）
     }
 
     setMode(mode) {
         if (this.mode === mode) return;
+
+        // フリープレイから別モードに切り替える際、必要ならフリープレイのスコアを保存するためのフックを呼ぶ
+        if (this.mode === 'freeplay' && mode !== 'freeplay') {
+            if (typeof window.onLeaveFreeplay === 'function') {
+                try {
+                    window.onLeaveFreeplay(this);
+                } catch (e) {
+                    console.warn('onLeaveFreeplay handler threw', e);
+                }
+            }
+        }
+
         this.mode = mode;
         this.resetForMode();
         this.updateTabUI();
@@ -20,8 +33,10 @@ class GameState {
     }
 
     resetForMode() {
-        // スコアは保持するが、盤面とカウントはリセットする
+        // モード切替時はスコアをリセットし、盤面とカウントを初期化する
+        this.score = 0;
         this.gameActive = true;
+        this.timeStarted = false;
         if (this.mode === 'timemode') {
             this.timeRemaining = 120;
         } else if (this.mode === 'turnmode') {
@@ -37,6 +52,7 @@ class GameState {
     tick(deltaMs) {
         if (!this.gameActive) return;
         if (this.mode !== 'timemode') return;
+        if (!this.timeStarted) return;
 
         this._accumulator += deltaMs;
         // 1秒ごとにデクリメントする
@@ -45,15 +61,34 @@ class GameState {
             this.timeRemaining = Math.max(0, this.timeRemaining - seconds);
             this._accumulator -= seconds * 1000;
             if (this.timeRemaining === 0) {
-                this.gameActive = false;
+                this._endGame();
             }
         }
+    }
+
+    // タイムモードのカウントを開始する（最初のピース移動後に呼ぶ）
+    startTimer() {
+        if (this.mode !== 'timemode') return;
+        this.timeStarted = true;
+        this._accumulator = 0;
     }
 
     consumeTurn() {
         if (this.mode !== 'turnmode' || !this.gameActive) return;
         this.turnsRemaining = Math.max(0, this.turnsRemaining - 1);
-        if (this.turnsRemaining === 0) this.gameActive = false;
+        if (this.turnsRemaining === 0) this._endGame();
+    }
+
+    _endGame() {
+        if (!this.gameActive) return;
+        this.gameActive = false;
+        if (typeof window.onGameEnd === 'function') {
+            try {
+                window.onGameEnd(this);
+            } catch (e) {
+                console.warn('onGameEnd handler threw', e);
+            }
+        }
     }
 
     updateTabUI() {
