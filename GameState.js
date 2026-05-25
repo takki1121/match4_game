@@ -14,6 +14,9 @@ class GameState {
         this.mode = mode;
         this.resetForMode();
         this.updateTabUI();
+        if (window.refreshHighscores) {
+            window.refreshHighscores(this.mode);
+        }
     }
 
     resetForMode() {

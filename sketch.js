@@ -16,6 +16,8 @@ let scoringSystem;
 let gameState;
 let selectedPiece = null;
 let highlightedPositions = [];
+let cachedHighscores = [];
+let cachedHighscoresMode = null;
 
 // ゲームフロー制御
 let gamePhase = 'waiting'; // 'waiting', 'matching', 'animating', 'falling'
@@ -50,6 +52,8 @@ function setup() {
     gameState = new GameState(grid);
     gameState.score = 0;
     gameState.updateTabUI();
+
+    refreshHighscores(gameState.mode);
 
     // グローバル関数：ゲームフローをリセット（GameState.resetForMode から呼ばれる）
     window.resetGameFlow = function() {
@@ -250,28 +254,32 @@ function displayUI() {
     }
 
     // ハイスコア表示（右側）
-    if (window.HighscoreAPI) {
-        // 非同期で取得して描画
-        if (!window._cachedHighscores || window._cachedHighscoresMode !== gameState.mode) {
-            HighscoreAPI.fetchHighscores(gameState.mode).then(data => {
-                window._cachedHighscores = data.highscores || [];
-                window._cachedHighscoresMode = data.mode;
-            }).catch(err => {
-                console.warn('Highscore fetch failed', err);
-            });
-        }
-
-        const list = window._cachedHighscores || [];
-        textSize(14);
-        textAlign(LEFT, TOP);
-        text('Highscores', width - 180, 20);
-        for (let i=0; i<5; i++) {
-            const item = list[i];
-            const label = item ? `${i+1}. ${item.name} ${item.score}` : `${i+1}. ---`;
-            text(label, width - 180, 40 + i*20);
-        }
-        textAlign(LEFT, BASELINE);
+    textSize(14);
+    textAlign(LEFT, TOP);
+    text('Highscores', width - 180, 20);
+    for (let i = 0; i < 5; i++) {
+        const item = cachedHighscores[i];
+        const label = item ? `${i + 1}. ${item.name} ${item.score}` : `${i + 1}. ---`;
+        text(label, width - 180, 40 + i * 20);
     }
+    textAlign(LEFT, BASELINE);
+}
+
+function refreshHighscores(mode) {
+    if (!window.HighscoreAPI) return;
+    HighscoreAPI.fetchHighscores(mode)
+        .then(data => {
+            cachedHighscores = data.highscores || [];
+            cachedHighscoresMode = data.mode;
+            if (gameState && gameState.mode === mode) {
+                redraw();
+            }
+        })
+        .catch(error => {
+            console.warn('Highscore load failed', error);
+            cachedHighscores = [];
+            cachedHighscoresMode = null;
+        });
 }
 
 function mousePressed() {
