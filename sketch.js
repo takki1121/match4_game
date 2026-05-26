@@ -42,10 +42,12 @@ function setup() {
     inputManager = new Input(grid, CONFIG);
     
     // マッチ検出の初期化
-    matchDetector = new MatchDetector(grid, CONFIG);
-    
     // アニメーション管理の初期化
     animationManager = new AnimationManager();
+    animationManager.setConfig(CONFIG);
+
+    matchDetector = new MatchDetector(grid, CONFIG);
+    matchDetector.setAnimationManager(animationManager);
     
     // スコアシステムの初期化
     scoringSystem = new ScoringSystem();
@@ -131,8 +133,10 @@ function updateGameState() {
             // マッチが見つかった
             console.log(`Match found: ${matches.length} pieces`);
             
-            // アニメーション追加
-            animationManager.addMultipleDeleteAnimations(matches);
+            // マッチを拡張して、隣接同色も含む全削除対象を取得
+            const expanded = matchDetector.expandMatches(matches);
+            // アニメーション追加（拡張対象すべて）
+            animationManager.addMultipleDeleteAnimations(expanded, grid);
             
             // アニメーション待機
             gamePhase = 'animating';
@@ -182,6 +186,12 @@ function updateGameState() {
 function drawGridWithHighlight() {
     const margin = CONFIG.MARGIN;
     const size = CONFIG.PIECE_SIZE;
+    const colors = [
+        color(255, 0, 0),      // 赤
+        color(0, 255, 0),      // 黄緑
+        color(0, 0, 255),      // 青
+        color(255, 255, 0)     // 黄色
+    ];
 
     for (let row = 0; row < CONFIG.ROWS; row++) {
         for (let col = 0; col < CONFIG.COLS; col++) {
@@ -209,28 +219,34 @@ function drawGridWithHighlight() {
             const piece = grid.getPiece(col, row);
             if (piece) {
                 const visuals = animationManager.getAnimationVisuals(col, row);
-                
+
                 // アニメーション適用
                 push();
                 translate(x + size / 2, y + size / 2 + visuals.offsetY);
                 scale(visuals.scale);
                 translate(-size / 2, -size / 2);
-                
-                const colors = [
-                    color(255, 0, 0),      // 赤
-                    color(0, 255, 0),      // 黄緑
-                    color(0, 0, 255),      // 青
-                    color(255, 255, 0)     // 黄色
-                ];
-                
+
                 fill(...colors[piece.color].levels.slice(0, 3), visuals.alpha);
                 stroke(0);
                 strokeWeight(2);
                 circle(size / 2, size / 2, size - 4);
-                
+
                 pop();
             }
         }
+    }
+
+    // パーティクル描画（消去のエフェクト）
+    const particles = animationManager.getParticles();
+    noStroke();
+    for (const p of particles) {
+        const colIdx = p.colorIndex;
+        let fillColor = [200, 200, 200];
+        if (typeof colIdx === 'number' && colors[colIdx]) {
+            fillColor = colors[colIdx].levels.slice(0, 3);
+        }
+        fill(...fillColor, p.alpha);
+        circle(p.x, p.y, p.radius);
     }
 }
 

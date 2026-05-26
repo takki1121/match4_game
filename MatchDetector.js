@@ -7,6 +7,11 @@ class MatchDetector {
         this.grid = grid;
         this.config = config;
         this.MIN_MATCH = 4; // 4つ以上で消える
+        this.animationManager = null;
+    }
+
+    setAnimationManager(animMgr) {
+        this.animationManager = animMgr;
     }
 
     /**
@@ -90,16 +95,56 @@ class MatchDetector {
      * マッチしたピースをマークして削除
      */
     removeMatches(matchPositions) {
-        const deletedCount = matchPositions.length;
-        
-        matchPositions.forEach(({ col, row }) => {
-            const piece = this.grid.getPiece(col, row);
-            if (piece) {
-                this.grid.setPiece(col, row, null);
-            }
-        });
+        // matchPositions を起点に、隣接する同色領域も含めて削除する
+        const toDeleteSet = new Set();
+        const seen = new Set();
 
-        return deletedCount;
+        const key = (c, r) => `${c},${r}`;
+
+        for (const start of matchPositions) {
+            const sk = key(start.col, start.row);
+            if (seen.has(sk)) continue;
+
+            const startPiece = this.grid.getPiece(start.col, start.row);
+            if (!startPiece) continue;
+            const color = startPiece.color;
+
+            // BFSで連結領域を探索
+            const queue = [ { col: start.col, row: start.row } ];
+            while (queue.length > 0) {
+                const p = queue.shift();
+                const pk = key(p.col, p.row);
+                if (seen.has(pk)) continue;
+                seen.add(pk);
+
+                const piece = this.grid.getPiece(p.col, p.row);
+                if (!piece) continue;
+                if (piece.color !== color) continue;
+
+                toDeleteSet.add(pk);
+
+                // 4方向の隣接を追加
+                const neighbors = [
+                    { col: p.col - 1, row: p.row },
+                    { col: p.col + 1, row: p.row },
+                    { col: p.col, row: p.row - 1 },
+                    { col: p.col, row: p.row + 1 }
+                ];
+                for (const n of neighbors) {
+                    if (n.col < 0 || n.col >= this.grid.cols || n.row < 0 || n.row >= this.grid.rows) continue;
+                    const nk = key(n.col, n.row);
+                    if (!seen.has(nk)) queue.push(n);
+                }
+            }
+        }
+
+        // 実際に削除
+        for (const entry of toDeleteSet) {
+            const [c, r] = entry.split(',').map(Number);
+            this.grid.setPiece(c, r, null);
+        }
+
+        return toDeleteSet.size;
     }
 
     /**
@@ -124,6 +169,11 @@ class MatchDetector {
                         this.grid.setPiece(col, row, piece);
                         this.grid.setPiece(col, sourceRow, null);
                         pieceMoved = true;
+
+                        // アニメーションを追加（上から下へ落ちる動き）
+                        if (this.animationManager) {
+                            this.animationManager.addFallAnimation(col, sourceRow, row);
+                        }
                     }
                 }
             }
@@ -140,7 +190,14 @@ class MatchDetector {
             for (let col = 0; col < this.grid.cols; col++) {
                 if (!this.grid.getPiece(col, row)) {
                     const randomColor = Math.floor(Math.random() * this.grid.numColors);
-                    this.grid.setPiece(col, row, new Piece(col, row, randomColor));
+                    const newPiece = new Piece(col, row, randomColor);
+                    this.grid.setPiece(col, row, newPiece);
+
+                    // 新規生成したピースは上から落ちてくるようにアニメーションを追加
+                    if (this.animationManager) {
+                        // fromRow を -1 にして上から落ちてくる表現にする
+                        this.animationManager.addFallAnimation(col, -1, row);
+                    }
                 }
             }
         }
@@ -151,5 +208,55 @@ class MatchDetector {
      */
     hasMatches() {
         return this.detectAllMatches().length > 0;
+    }
+
+    /**
+     * 指定されたマッチ位置から拡張して、隣接同色領域を含む削除対象一覧を返す
+     * @returns {Array} [{col,row}, ...]
+     */
+    expandMatches(matchPositions) {
+        const toDeleteSet = new Set();
+        const seen = new Set();
+        const key = (c, r) => `${c},${r}`;
+
+        for (const start of matchPositions) {
+            const sk = key(start.col, start.row);
+            if (seen.has(sk)) continue;
+
+            const startPiece = this.grid.getPiece(start.col, start.row);
+            if (!startPiece) continue;
+            const color = startPiece.color;
+
+            const queue = [ { col: start.col, row: start.row } ];
+            while (queue.length > 0) {
+                const p = queue.shift();
+                const pk = key(p.col, p.row);
+                if (seen.has(pk)) continue;
+                seen.add(pk);
+
+                const piece = this.grid.getPiece(p.col, p.row);
+                if (!piece) continue;
+                if (piece.color !== color) continue;
+
+                toDeleteSet.add(pk);
+
+                const neighbors = [
+                    { col: p.col - 1, row: p.row },
+                    { col: p.col + 1, row: p.row },
+                    { col: p.col, row: p.row - 1 },
+                    { col: p.col, row: p.row + 1 }
+                ];
+                for (const n of neighbors) {
+                    if (n.col < 0 || n.col >= this.grid.cols || n.row < 0 || n.row >= this.grid.rows) continue;
+                    const nk = key(n.col, n.row);
+                    if (!seen.has(nk)) queue.push(n);
+                }
+            }
+        }
+
+        return Array.from(toDeleteSet).map(s => {
+            const [c, r] = s.split(',').map(Number);
+            return { col: c, row: r };
+        });
     }
 }
