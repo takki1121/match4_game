@@ -163,11 +163,29 @@ function updateGameState() {
                 console.log(`Deleted ${deletedCount} pieces (waiting before fall)`);
 
                 // スコア加算（削除時点で加算）
-                const score = scoringSystem.calculateScore(deletedCount, chainLevel + 1);
+                const chainNumber = chainLevel + 1;
+                let score = scoringSystem.calculateScore(deletedCount, chainNumber);
+                // 連続（コンボ）補正: 連続回数 * 1.3倍を適用
+                if (chainNumber > 1) {
+                    const comboMultiplier = chainNumber * 1.3;
+                    score = Math.floor(score * comboMultiplier);
+                }
                 gameState.score += score;
                 console.log(`Score: +${score} (total: ${gameState.score})`);
 
                 chainLevel++;
+
+                // 連鎖が2以上ならコンボ扱いにして派手な演出
+                if (chainLevel > 1) {
+                    const centerX = width / 2;
+                    const centerY = CONFIG.MARGIN + 40; // グリッド上部あたりに表示
+                    animationManager.addComboBurst(centerX, centerY, chainLevel);
+                    // コンボ表示タイマー（UI描画用）
+                    window.currentCombo = {
+                        count: chainLevel,
+                        until: Date.now() + 1200
+                    };
+                }
 
                 // 一旦空白を保ったまま短い待ち時間を設け、その後落下処理を行う
                 pauseUntil = Date.now() + CONFIG.DELETE_PAUSE_MS;
@@ -275,8 +293,58 @@ function drawGridWithHighlight() {
         if (typeof colIdx === 'number' && colors[colIdx]) {
             fillColor = colors[colIdx].levels.slice(0, 3);
         }
-        fill(...fillColor, p.alpha);
-        circle(p.x, p.y, p.radius);
+
+        if (p.kind === 'star') {
+            push();
+            translate(p.x, p.y);
+            rotate(p.rotation || 0);
+            noStroke();
+            fill(...fillColor, p.alpha);
+            // 5ポイントの星を描く（半径: p.radius、内半径: p.radius*0.45）
+            beginShape();
+            const points = 5;
+            for (let i = 0; i < points * 2; i++) {
+                const angle = (i * Math.PI) / points;
+                const r = (i % 2 === 0) ? p.radius : p.radius * 0.45;
+                const vx = Math.cos(angle) * r;
+                const vy = Math.sin(angle) * r;
+                vertex(vx, vy);
+            }
+            endShape(CLOSE);
+            pop();
+        } else {
+            fill(...fillColor, p.alpha);
+            circle(p.x, p.y, p.radius);
+        }
+    }
+
+    // コンボの画面パルスとテキスト表示
+    const pulse = animationManager.getComboPulse ? animationManager.getComboPulse() : null;
+    if (pulse) {
+        const t = (Date.now() - pulse.start) / pulse.duration;
+        const eased = 1 - Math.pow(1 - Math.min(Math.max(t, 0), 1), 3);
+        push();
+        // 中央に向けて白フラッシュ（アルファは強→0）
+        noStroke();
+        fill(255, 240, 200, 200 * (1 - eased));
+        rect(0, 0, width, height);
+        pop();
+
+        // 大きいコンボテキスト
+        if (window.currentCombo && Date.now() < window.currentCombo.until) {
+            const combo = window.currentCombo.count;
+            push();
+            textAlign(CENTER, CENTER);
+            const scaleFactor = 1 + 0.6 * (1 - Math.abs(0.5 - t) * 2);
+            translate(width / 2, CONFIG.MARGIN + 40);
+            scale(scaleFactor);
+            textSize(36 + combo * 6);
+            fill(255, 80, 0);
+            stroke(255);
+            strokeWeight(6);
+            text(`${combo}コンボ`, 0, 0);
+            pop();
+        }
     }
 }
 

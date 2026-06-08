@@ -8,6 +8,7 @@ class AnimationManager {
         this.animationDuration = 300; // ミリ秒
         this.particles = []; // 消去時のパーティクル
         this.config = null;
+        this.comboPulse = null; // コンボ演出の状態
     }
 
     /**
@@ -43,6 +44,27 @@ class AnimationManager {
                     life: 300 + Math.random() * 200,
                     start: Date.now(),
                     colorIndex: colorIndex
+                });
+            }
+
+            // 星スパークルを少数追加
+            const starCount = 3;
+            for (let i = 0; i < starCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 0.6 + Math.random() * 1.2;
+                this.particles.push({
+                    x: cx + (Math.random() - 0.5) * 8,
+                    y: cy + (Math.random() - 0.5) * 8,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 0.3,
+                    radius: 10 + Math.random() * 8,
+                    alpha: 255,
+                    life: 400 + Math.random() * 300,
+                    start: Date.now(),
+                    colorIndex: colorIndex,
+                    kind: 'star',
+                    rotation: Math.random() * Math.PI * 2,
+                    rotSpeed: (Math.random() - 0.5) * 0.2
                 });
             }
         }
@@ -122,9 +144,59 @@ class AnimationManager {
             p.vy += 0.06; // 重力
             p.x += p.vx * (1 + t / 200);
             p.y += p.vy * (1 + t / 200);
+            if (typeof p.rotation === 'number' && typeof p.rotSpeed === 'number') {
+                p.rotation += p.rotSpeed * (1 + t / 200);
+            }
             p.alpha = Math.max(0, 255 * (1 - t / p.life));
             return p.alpha > 5;
         });
+
+        // comboPulse の終了チェック
+        if (this.comboPulse) {
+            if (Date.now() - this.comboPulse.start > this.comboPulse.duration) {
+                this.comboPulse = null;
+            }
+        }
+    }
+
+    /**
+     * コンボ演出のバーストを追加
+     * x,y: ピクセル座標
+     */
+    addComboBurst(x, y, comboCount) {
+        const now = Date.now();
+        const burstCount = 28 + Math.min(comboCount * 6, 40);
+        for (let i = 0; i < burstCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 0.6 + Math.random() * 4 * (1 + comboCount / 5);
+            this.particles.push({
+                x: x + (Math.random() - 0.5) * 20,
+                y: y + (Math.random() - 0.5) * 20,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 0.6,
+                radius: 4 + Math.random() * (6 + comboCount),
+                alpha: 255,
+                life: 500 + Math.random() * 600,
+                start: now,
+                colorIndex: null,
+                kind: 'star',
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.4
+            });
+        }
+
+        // 大きな画面パルス（フラッシュ）
+        this.comboPulse = {
+            start: now,
+            duration: 600 + Math.min(comboCount * 120, 1200),
+            x,
+            y,
+            combo: comboCount
+        };
+    }
+
+    getComboPulse() {
+        return this.comboPulse;
     }
 
     /**
