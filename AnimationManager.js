@@ -52,14 +52,27 @@ class AnimationManager {
      * 落下アニメーションを追加
      */
     addFallAnimation(col, fromRow, toRow) {
+        const distance = Math.abs(toRow - fromRow);
+        // 距離に応じてアニメーション時間を伸ばす
+        const duration = Math.max(this.animationDuration, this.animationDuration * distance);
+
+        // ピクセルでの開始/終了位置を計算（マスを無視して連続的に落ちる表現）
+        const size = this.config ? this.config.PIECE_SIZE : CONFIG.PIECE_SIZE;
+        const margin = this.config ? this.config.MARGIN : CONFIG.MARGIN;
+        const cell = size + margin;
+        const startY = fromRow * cell + margin; // fromRow が -1 の場合は上に出現する
+        const endY = toRow * cell + margin;
+
         this.animations.push({
             type: 'fall',
             col,
             fromRow,
             toRow,
+            startY,
+            endY,
             startTime: Date.now(),
-            duration: this.animationDuration,
-            distance: Math.abs(toRow - fromRow)
+            duration: duration,
+            distance: distance
         });
     }
 
@@ -132,22 +145,25 @@ class AnimationManager {
         };
 
         for (let anim of this.animations) {
-            if (anim.col !== col || anim.row !== row) continue;
+            if (anim.col !== col) continue;
 
-            const progress = this.getProgress(anim);
-
+            // delete は anim.row と一致するピースに適用
             if (anim.type === 'delete') {
-                // 消去アニメーション：ポップしてフェードアウト
+                if (anim.row !== row) continue;
+                const progress = this.getProgress(anim);
                 visuals.alpha = 255 * (1 - progress);
-                // 初めに少し大きく（パッ）、その後縮小して消える
                 visuals.scale = 1 + Math.sin(progress * Math.PI) * 0.6 * (1 - progress);
-            } else if (anim.type === 'fall') {
-                // 落下アニメーション：最終行（grid に移動済み）に対して
-                // 初期は上から落ちてくるように見せ、最終位置で offsetY = 0 になる
-                const distance = anim.toRow - anim.fromRow;
-                const totalPixels = distance * (CONFIG.PIECE_SIZE + CONFIG.MARGIN);
-                // progress=0 -> offsetY = -totalPixels (上に位置), progress=1 -> 0
-                visuals.offsetY = - (1 - progress) * totalPixels;
+            }
+
+            // fall は最終到達行（toRow）にいるピースに対して表示を調整
+            if (anim.type === 'fall') {
+                if (anim.toRow !== row) continue;
+                const progress = this.getProgress(anim);
+                // イージング（easeOutCubic）
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const currentY = anim.startY + eased * (anim.endY - anim.startY);
+                // 描画側は最終位置(anim.endY)に描くため、その差分を offsetY として返す
+                visuals.offsetY = currentY - anim.endY;
             }
         }
 

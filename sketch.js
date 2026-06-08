@@ -179,18 +179,32 @@ function updateGameState() {
     }
     
     if (gamePhase === 'falling') {
-        // 重力適用と新ピース生成
-        matchDetector.applyGravity();
-        matchDetector.fillEmptySpaces();
-
-        gamePhase = 'matching';
+        // 落下アニメーション再生中の待機フェーズ
+        // animationManager による落下エフェクトが完了するまで待ち、
+        // 完了後に短いポーズを挟んでから次のマッチ判定へ移行する
+        if (animationManager.isAnimating()) {
+            // まだアニメーション中 → 何もしない
+            return;
+        } else {
+            // 落下アニメーション完了 → 少し待ってからマッチ判定へ
+            pauseUntil = Date.now() + CONFIG.DELETE_PAUSE_MS;
+            gamePhase = 'post_fall_pause';
+        }
     }
 
     if (gamePhase === 'pause_after_delete') {
         if (Date.now() >= pauseUntil) {
-            // 待機完了 → 落下処理へ
+            // 待機完了 → 落下処理を開始（この時点で落下アニメーションが追加される）
             matchDetector.applyGravity();
             matchDetector.fillEmptySpaces();
+            // 実際の落下の視覚表現が終わるまで待つフェーズへ
+            gamePhase = 'falling';
+        }
+    }
+
+    if (gamePhase === 'post_fall_pause') {
+        if (Date.now() >= pauseUntil) {
+            // 落下後の小休止が終わったらマッチ判定へ
             gamePhase = 'matching';
         }
     }
