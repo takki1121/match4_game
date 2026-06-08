@@ -7,6 +7,9 @@ const CONFIG = {
     MARGIN: 10
 };
 
+// 削除後に一時的に空白にする待ち時間（ミリ秒）
+CONFIG.DELETE_PAUSE_MS = 300;
+
 let grid;
 let gameLogic;
 let inputManager;
@@ -22,6 +25,7 @@ let cachedHighscoresMode = null;
 // ゲームフロー制御
 let gamePhase = 'waiting'; // 'waiting', 'matching', 'animating', 'falling'
 let chainLevel = 0; // 連鎖レベル
+let pauseUntil = 0; // 一時停止解除時刻（ms since epoch）
 
 function setup() {
     // 動的にPIECE_SIZEを計算して画面にフィットさせる
@@ -156,15 +160,18 @@ function updateGameState() {
             if (matches.length > 0) {
                 // ピースを削除
                 const deletedCount = matchDetector.removeMatches(matches);
-                console.log(`Deleted ${deletedCount} pieces`);
-                
-                // スコア加算
+                console.log(`Deleted ${deletedCount} pieces (waiting before fall)`);
+
+                // スコア加算（削除時点で加算）
                 const score = scoringSystem.calculateScore(deletedCount, chainLevel + 1);
                 gameState.score += score;
                 console.log(`Score: +${score} (total: ${gameState.score})`);
-                
+
                 chainLevel++;
-                gamePhase = 'falling';
+
+                // 一旦空白を保ったまま短い待ち時間を設け、その後落下処理を行う
+                pauseUntil = Date.now() + CONFIG.DELETE_PAUSE_MS;
+                gamePhase = 'pause_after_delete';
             } else {
                 gamePhase = 'waiting';
             }
@@ -175,8 +182,17 @@ function updateGameState() {
         // 重力適用と新ピース生成
         matchDetector.applyGravity();
         matchDetector.fillEmptySpaces();
-        
+
         gamePhase = 'matching';
+    }
+
+    if (gamePhase === 'pause_after_delete') {
+        if (Date.now() >= pauseUntil) {
+            // 待機完了 → 落下処理へ
+            matchDetector.applyGravity();
+            matchDetector.fillEmptySpaces();
+            gamePhase = 'matching';
+        }
     }
 }
 
