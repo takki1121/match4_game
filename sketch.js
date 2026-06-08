@@ -7,6 +7,14 @@ const CONFIG = {
     MARGIN: 10
 };
 
+// テクスチャに合わせた共通カラー（ピース描画のフォールバックとパーティクルで使用）
+const PIECE_COLORS = [
+    [67, 134, 255],   // blue.png
+    [166, 230, 102],  // light_green.png
+    [255, 154, 201],  // pink.png
+    [255, 229, 102]   // yellow.png
+];
+
 // 削除後に一時的に空白にする待ち時間（ミリ秒）
 CONFIG.DELETE_PAUSE_MS = 300;
 
@@ -21,6 +29,7 @@ let selectedPiece = null;
 let highlightedPositions = [];
 let cachedHighscores = [];
 let cachedHighscoresMode = null;
+let textures = [];
 
 // ゲームフロー制御
 let gamePhase = 'waiting'; // 'waiting', 'matching', 'animating', 'falling'
@@ -77,6 +86,15 @@ function setup() {
     if (tabTime) tabTime.addEventListener('click', () => gameState.setMode('timemode'));
     if (tabTurn) tabTurn.addEventListener('click', () => gameState.setMode('turnmode'));
     if (tabFree) tabFree.addEventListener('click', () => gameState.setMode('freeplay'));
+}
+
+// 画像読み込み
+function preload() {
+    // テクスチャは game/index.html の相対パスで読み込まれる（このファイルは game/ 配下）
+    textures[0] = loadImage('img/blue.png');
+    textures[1] = loadImage('img/light_green.png');
+    textures[2] = loadImage('img/pink.png');
+    textures[3] = loadImage('img/yellow.png');
 }
 
 function windowResized() {
@@ -234,12 +252,6 @@ function updateGameState() {
 function drawGridWithHighlight() {
     const margin = CONFIG.MARGIN;
     const size = CONFIG.PIECE_SIZE;
-    const colors = [
-        color(255, 0, 0),      // 赤
-        color(0, 255, 0),      // 黄緑
-        color(0, 0, 255),      // 青
-        color(255, 255, 0)     // 黄色
-    ];
 
     for (let row = 0; row < CONFIG.ROWS; row++) {
         for (let col = 0; col < CONFIG.COLS; col++) {
@@ -268,16 +280,23 @@ function drawGridWithHighlight() {
             if (piece) {
                 const visuals = animationManager.getAnimationVisuals(col, row);
 
-                // アニメーション適用
+                // アニメーション適用（テクスチャがある場合は画像で描画）
                 push();
                 translate(x + size / 2, y + size / 2 + visuals.offsetY);
                 scale(visuals.scale);
-                translate(-size / 2, -size / 2);
 
-                fill(...colors[piece.color].levels.slice(0, 3), visuals.alpha);
-                stroke(0);
-                strokeWeight(2);
-                circle(size / 2, size / 2, size - 4);
+                if (textures && textures[piece.color]) {
+                    imageMode(CENTER);
+                    tint(255, visuals.alpha);
+                    image(textures[piece.color], 0, 0, size - 4, size - 4);
+                    noTint();
+                } else {
+                    // フォールバック：従来の丸描画
+                    fill(...PIECE_COLORS[piece.color], visuals.alpha);
+                    stroke(0);
+                    strokeWeight(2);
+                    circle(0, 0, size - 4);
+                }
 
                 pop();
             }
@@ -290,8 +309,8 @@ function drawGridWithHighlight() {
     for (const p of particles) {
         const colIdx = p.colorIndex;
         let fillColor = [200, 200, 200];
-        if (typeof colIdx === 'number' && colors[colIdx]) {
-            fillColor = colors[colIdx].levels.slice(0, 3);
+        if (typeof colIdx === 'number' && PIECE_COLORS[colIdx]) {
+            fillColor = PIECE_COLORS[colIdx];
         }
 
         if (p.kind === 'star') {
