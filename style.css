@@ -76,7 +76,6 @@ body {
     font-size: 18px;
     color: #c62828;
 }
-}
 
 /* p5.jsキャンバス */
 canvas {
@@ -124,4 +123,61 @@ canvas {
 .tab.active {
     background: #667eea;
     color: white;
+}
+
+/* スマホ表示向けレイアウト：横並びだと画面幅を超えてスコア欄が
+   はみ出すため、縦積みレイアウトに切り替え、タブバー分の余白を確保する */
+@media (max-width: 700px) {
+    body {
+        align-items: flex-start;
+        padding-bottom: 90px; /* 固定タブバーに隠れないようにする */
+    }
+
+    #container {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        max-width: 100%;
+        padding: 12px;
+        gap: 12px;
+    }
+
+    #highscores-panel {
+        order: 2;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 12px;
+    }
+
+    #game-container {
+        order: 1;
+        display: flex;
+        justify-content: center;
+        overflow-x: auto;
+    }
+
+    #ui-container {
+        order: 3;
+        width: 100%;
+        min-width: 0;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .tab-bar {
+        bottom: calc(10px + env(safe-area-inset-bottom));
+        left: 8px;
+        right: 8px;
+        transform: none;
+        justify-content: center;
+        flex-wrap: wrap;
+        max-width: none;
+    }
+
+    .tab {
+        padding: 10px 14px;
+        font-size: 14px;
+    }
 }

@@ -517,16 +517,27 @@ function _getCanvasAndRect() {
     return { canvasEl, rect };
 }
 
+// p5.js registers touch listeners on `window`, so these fire for taps anywhere
+// on the page (e.g. the tab bar buttons), not just the canvas. Ignore those so
+// we don't preventDefault() their native click/tap behavior.
+function _isEventOnCanvas(event, canvasEl) {
+    const target = event && event.target;
+    return !!(target && (target === canvasEl || canvasEl.contains(target)));
+}
+
 // Use event coordinates and canvas bounding rect to compute accurate canvas-local coords
 function touchStarted(event) {
     const info = _getCanvasAndRect();
     if (!info) return false;
     const { canvasEl, rect } = info;
+    if (!_isEventOnCanvas(event, canvasEl)) return true;
     if (event && event.touches && event.touches.length > 0) {
         event.preventDefault();
         const t = event.touches[0];
-        const scaleX = canvasEl.width / rect.width;
-        const scaleY = canvasEl.height / rect.height;
+        // Use p5's user-space width/height to compute scale between
+        // DOM rect (CSS pixels) and p5 coordinates (user-space pixels).
+        const scaleX = width / rect.width;
+        const scaleY = height / rect.height;
         const cx = (t.clientX - rect.left) * scaleX;
         const cy = (t.clientY - rect.top) * scaleY;
 
@@ -546,11 +557,13 @@ function touchMoved(event) {
     const info = _getCanvasAndRect();
     if (!info) return false;
     const { canvasEl, rect } = info;
+    if (!_isEventOnCanvas(event, canvasEl)) return true;
     if (event && event.touches && event.touches.length > 0) {
         event.preventDefault();
         const t = event.touches[0];
-        const scaleX = canvasEl.width / rect.width;
-        const scaleY = canvasEl.height / rect.height;
+        // Use p5's user-space width/height for correct mapping on high-DPR
+        const scaleX = width / rect.width;
+        const scaleY = height / rect.height;
         const cx = (t.clientX - rect.left) * scaleX;
         const cy = (t.clientY - rect.top) * scaleY;
 
@@ -570,12 +583,15 @@ function touchEnded(event) {
     // Use changedTouches when touches is empty
     const info = _getCanvasAndRect();
     if (!info) return mouseReleased();
+    const { canvasEl } = info;
+    if (!_isEventOnCanvas(event, canvasEl)) return true;
     if (event && event.changedTouches && event.changedTouches.length > 0) {
         event.preventDefault();
-        const { canvasEl, rect } = info;
+        const { rect } = info;
         const t = event.changedTouches[0];
-        const scaleX = canvasEl.width / rect.width;
-        const scaleY = canvasEl.height / rect.height;
+        // Use p5's user-space width/height for correct mapping on high-DPR
+        const scaleX = width / rect.width;
+        const scaleY = height / rect.height;
         const cx = (t.clientX - rect.left) * scaleX;
         const cy = (t.clientY - rect.top) * scaleY;
 
