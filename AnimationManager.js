@@ -182,16 +182,18 @@ class AnimationManager {
      */
     addComboBurst(x, y, comboCount) {
         const now = Date.now();
-        const burstCount = 28 + Math.min(comboCount * 6, 40);
+        // 演出の派手さは8コンボで頭打ちにする（それ以上は同じ強さのまま）
+        const intensity = Math.min(comboCount, 8);
+        const burstCount = 28 + intensity * 5;
         for (let i = 0; i < burstCount; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = 0.6 + Math.random() * 4 * (1 + comboCount / 5);
+            const speed = 0.6 + Math.random() * 4 * (1 + intensity / 5);
             this.particles.push({
                 x: x + (Math.random() - 0.5) * 20,
                 y: y + (Math.random() - 0.5) * 20,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed - 0.6,
-                radius: 4 + Math.random() * (6 + comboCount),
+                radius: 4 + Math.random() * (6 + intensity),
                 alpha: 255,
                 life: 500 + Math.random() * 600,
                 start: now,
@@ -205,7 +207,7 @@ class AnimationManager {
         // 大きな画面パルス（フラッシュ）
         this.comboPulse = {
             start: now,
-            duration: 600 + Math.min(comboCount * 120, 1200),
+            duration: 600 + intensity * 100,
             x,
             y,
             combo: comboCount

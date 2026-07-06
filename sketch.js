@@ -360,12 +360,14 @@ function drawGridWithHighlight() {
         // 大きいコンボテキスト
         if (window.currentCombo && Date.now() < window.currentCombo.until) {
             const combo = window.currentCombo.count;
+            // 文字サイズの派手さも8コンボで頭打ちにする（それ以上は同じ大きさのまま）
+            const comboIntensity = Math.min(combo, 8);
             push();
             textAlign(CENTER, CENTER);
             const scaleFactor = 1 + 0.6 * (1 - Math.abs(0.5 - t) * 2);
             translate(width / 2, CONFIG.MARGIN + 40);
             scale(scaleFactor);
-            textSize(36 + combo * 6);
+            textSize(36 + comboIntensity * 6);
             fill(255, 80, 0);
             stroke(255);
             strokeWeight(6);
