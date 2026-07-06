@@ -143,7 +143,7 @@ canvas {
     }
 
     #highscores-panel {
-        order: 2;
+        order: 3;
         width: 100%;
         border-right: none;
         border-bottom: 1px solid #eee;
@@ -151,19 +151,28 @@ canvas {
     }
 
     #game-container {
-        order: 1;
+        order: 2;
         display: flex;
         justify-content: center;
         overflow-x: auto;
     }
 
+    /* スコア/モード/残り時間はスクロールせずに常に見えるよう、
+       一番上に固定表示する */
     #ui-container {
-        order: 3;
+        order: 1;
+        position: sticky;
+        top: 0;
+        z-index: 500;
         width: 100%;
         min-width: 0;
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
+        background: rgba(255, 255, 255, 0.97);
+        padding: 8px 6px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
     }
 
     .tab-bar {

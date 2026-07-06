@@ -146,7 +146,15 @@ function updateGameState() {
         // ユーザー入力待機
         return;
     }
-    
+
+    if (gamePhase === 'swapping') {
+        // 交換アニメーションの再生中はマッチ判定を待つ
+        if (!animationManager.isAnimating()) {
+            gamePhase = 'matching';
+        }
+        return;
+    }
+
     if (gamePhase === 'matching') {
         // マッチ判定
         const matches = matchDetector.detectAllMatches();
@@ -282,7 +290,7 @@ function drawGridWithHighlight() {
 
                 // アニメーション適用（テクスチャがある場合は画像で描画）
                 push();
-                translate(x + size / 2, y + size / 2 + visuals.offsetY);
+                translate(x + size / 2 + visuals.offsetX, y + size / 2 + visuals.offsetY);
                 scale(visuals.scale);
 
                 if (textures && textures[piece.color]) {
@@ -487,13 +495,13 @@ function mousePressed() {
     if (swapAction) {
         // ピース交換実行
         const { from, to } = swapAction;
-        executeSwap(from.col, from.row, to.col, to.row, swapAction.type);
+        const success = executeSwap(from.col, from.row, to.col, to.row, swapAction.type);
         selectedPiece = null;
         highlightedPositions = [];
-        
-        // マッチング開始
+
+        // 交換アニメーションの後にマッチング判定を開始
         chainLevel = 0;
-        gamePhase = 'matching';
+        gamePhase = success ? 'swapping' : 'waiting';
     } else if (inputManager.firstClickCol !== null) {
         // クリック操作での選択
         selectedPiece = {
@@ -616,14 +624,14 @@ function mouseDragged() {
     if (swapAction) {
         // ドラッグでピース交換実行
         const { from, to } = swapAction;
-        executeSwap(from.col, from.row, to.col, to.row, swapAction.type);
+        const success = executeSwap(from.col, from.row, to.col, to.row, swapAction.type);
         inputManager.handleMouseReleased();
         selectedPiece = null;
         highlightedPositions = [];
-        
-        // マッチング開始
+
+        // 交換アニメーションの後にマッチング判定を開始
         chainLevel = 0;
-        gamePhase = 'matching';
+        gamePhase = success ? 'swapping' : 'waiting';
     }
     
     return false;
@@ -642,6 +650,11 @@ function executeSwap(fromCol, fromRow, toCol, toRow, type) {
     
     if (success) {
         console.log(`Swap successful: (${fromCol}, ${fromRow}) ↔ (${toCol}, ${toRow})`);
+
+        // 2つのピースがそれぞれの新しい位置へスライドするアニメーション
+        animationManager.addSwapAnimation(toCol, toRow, fromCol, fromRow);
+        animationManager.addSwapAnimation(fromCol, fromRow, toCol, toRow);
+
         // ターンモードなら1ターン消費
         if (gameState && gameState.mode === 'turnmode') {
             gameState.consumeTurn();
@@ -653,6 +666,8 @@ function executeSwap(fromCol, fromRow, toCol, toRow, type) {
     } else {
         console.log('Swap failed - not adjacent or invalid position');
     }
+
+    return success;
 }
 
 // ゲーム終了時のハンドラ：タイム/ターンモードでランキング入りする場合のみ保存

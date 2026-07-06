@@ -99,6 +99,23 @@ class AnimationManager {
     }
 
     /**
+     * 交換（スワップ）アニメーションを追加
+     * col, row: このピースの交換後（現在）の位置
+     * fromCol, fromRow: 交換前の位置
+     */
+    addSwapAnimation(col, row, fromCol, fromRow) {
+        this.animations.push({
+            type: 'swap',
+            col,
+            row,
+            fromCol,
+            fromRow,
+            startTime: Date.now(),
+            duration: this.animationDuration
+        });
+    }
+
+    /**
      * 複数のピース削除アニメーション
      */
     addMultipleDeleteAnimations(matchPositions) {
@@ -213,6 +230,7 @@ class AnimationManager {
         const visuals = {
             alpha: 255,
             scale: 1,
+            offsetX: 0,
             offsetY: 0
         };
 
@@ -236,6 +254,24 @@ class AnimationManager {
                 const currentY = anim.startY + eased * (anim.endY - anim.startY);
                 // 描画側は最終位置(anim.endY)に描くため、その差分を offsetY として返す
                 visuals.offsetY = currentY - anim.endY;
+            }
+
+            // swap は交換後の位置（col, row）にいるピースに対して表示を調整
+            if (anim.type === 'swap') {
+                if (anim.row !== row) continue;
+                const progress = this.getProgress(anim);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const size = this.config ? this.config.PIECE_SIZE : CONFIG.PIECE_SIZE;
+                const margin = this.config ? this.config.MARGIN : CONFIG.MARGIN;
+                const cell = size + margin;
+                const fromX = anim.fromCol * cell;
+                const fromY = anim.fromRow * cell;
+                const toX = anim.col * cell;
+                const toY = anim.row * cell;
+                const currentX = fromX + eased * (toX - fromX);
+                const currentY = fromY + eased * (toY - fromY);
+                visuals.offsetX = currentX - toX;
+                visuals.offsetY = currentY - toY;
             }
         }
 
