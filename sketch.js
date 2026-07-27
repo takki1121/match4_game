@@ -30,6 +30,7 @@ let highlightedPositions = [];
 let cachedHighscores = [];
 let cachedHighscoresMode = null;
 let textures = [];
+let comboImages = []; // comboImages[1]～comboImages[8]：Nコンボ表示用画像
 
 // ゲームフロー制御
 let gamePhase = 'waiting'; // 'waiting', 'matching', 'animating', 'falling'
@@ -95,6 +96,11 @@ function preload() {
     textures[1] = loadImage('img/light_green.png');
     textures[2] = loadImage('img/pink.png');
     textures[3] = loadImage('img/yellow.png');
+
+    // コンボ数表示用画像（1com.png ～ 8com.png、8コンボ以上は8com.pngを使い回す）
+    for (let i = 1; i <= 8; i++) {
+        comboImages[i] = loadImage(`img/${i}com.png`);
+    }
 }
 
 function windowResized() {
@@ -357,22 +363,23 @@ function drawGridWithHighlight() {
         rect(0, 0, width, height);
         pop();
 
-        // 大きいコンボテキスト
+        // 大きいコンボ画像（Nコンボ！の文字画像）
         if (window.currentCombo && Date.now() < window.currentCombo.until) {
             const combo = window.currentCombo.count;
-            // 文字サイズの派手さも8コンボで頭打ちにする（それ以上は同じ大きさのまま）
+            // 画像の派手さ（大きさ）も8コンボで頭打ちにする（それ以上は同じ大きさのまま、9com.png以降は無いので8com.pngを使い回す）
             const comboIntensity = Math.min(combo, 8);
-            push();
-            textAlign(CENTER, CENTER);
-            const scaleFactor = 1 + 0.6 * (1 - Math.abs(0.5 - t) * 2);
-            translate(width / 2, CONFIG.MARGIN + 40);
-            scale(scaleFactor);
-            textSize(36 + comboIntensity * 6);
-            fill(255, 80, 0);
-            stroke(255);
-            strokeWeight(6);
-            text(`${combo}コンボ`, 0, 0);
-            pop();
+            const comboImg = comboImages[comboIntensity];
+            if (comboImg) {
+                push();
+                const scaleFactor = 1 + 0.6 * (1 - Math.abs(0.5 - t) * 2);
+                translate(width / 2, height / 2 - 60);
+                scale(scaleFactor);
+                imageMode(CENTER);
+                const targetW = Math.min(width * 1.15, 380 + comboIntensity * 30);
+                const targetH = targetW * (comboImg.height / comboImg.width);
+                image(comboImg, 0, 0, targetW, targetH);
+                pop();
+            }
         }
     }
 }
@@ -493,7 +500,12 @@ function mousePressed() {
     if (!gameState.gameActive || gamePhase !== 'waiting') return false;
     
     const swapAction = inputManager.handleMousePressed(mouseX, mouseY);
-    
+
+    // クリックされたピースを一瞬縮ませて「押した感」を出す
+    if (inputManager.dragStartCol !== null && inputManager.dragStartRow !== null) {
+        animationManager.addPressAnimation(inputManager.dragStartCol, inputManager.dragStartRow);
+    }
+
     if (swapAction) {
         // ピース交換実行
         const { from, to } = swapAction;

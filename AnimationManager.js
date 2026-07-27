@@ -99,6 +99,20 @@ class AnimationManager {
     }
 
     /**
+     * クリック（プレス）した瞬間に少し縮む演出を追加
+     * 100% → 95% へ約0.05秒で縮む
+     */
+    addPressAnimation(col, row) {
+        this.animations.push({
+            type: 'press',
+            col,
+            row,
+            startTime: Date.now(),
+            duration: 50
+        });
+    }
+
+    /**
      * 交換（スワップ）アニメーションを追加
      * col, row: このピースの交換後（現在）の位置
      * fromCol, fromRow: 交換前の位置
@@ -238,6 +252,13 @@ class AnimationManager {
 
         for (let anim of this.animations) {
             if (anim.col !== col) continue;
+
+            // press はクリックされたピースを一瞬だけ縮小させる
+            if (anim.type === 'press') {
+                if (anim.row !== row) continue;
+                const progress = this.getProgress(anim);
+                visuals.scale = 1 - 0.05 * progress;
+            }
 
             // delete は anim.row と一致するピースに適用
             if (anim.type === 'delete') {
