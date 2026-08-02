@@ -294,10 +294,25 @@ function drawGridWithHighlight() {
             if (piece) {
                 const visuals = animationManager.getAnimationVisuals(col, row);
 
+                // ドラッグ中のピースだけ少し浮かせて影をつける
+                const isDragged = inputManager && inputManager.isDragging &&
+                    inputManager.dragStartCol === col && inputManager.dragStartRow === row;
+                const liftOffset = isDragged ? -10 : 0;
+                const dragScale = isDragged ? 1.1 : 1;
+
+                if (isDragged) {
+                    // 元の位置に落ちる影
+                    push();
+                    noStroke();
+                    fill(0, 0, 0, 90);
+                    ellipse(x + size / 2, y + size / 2 + size * 0.4, size * 0.7, size * 0.25);
+                    pop();
+                }
+
                 // アニメーション適用（テクスチャがある場合は画像で描画）
                 push();
-                translate(x + size / 2 + visuals.offsetX, y + size / 2 + visuals.offsetY);
-                scale(visuals.scale);
+                translate(x + size / 2 + visuals.offsetX, y + size / 2 + visuals.offsetY + liftOffset);
+                scale(visuals.scale * dragScale);
 
                 if (textures && textures[piece.color]) {
                     imageMode(CENTER);
@@ -652,6 +667,13 @@ function mouseDragged() {
 }
 
 function mouseReleased() {
+    // 離した瞬間のバウンス演出。スワップが発生した場合は executeSwap 側で
+    // 既に両ピース分のバウンスを付けているので、ここでは二重に付けない
+    // （gamePhase が 'waiting' のままなら、このジェスチャーでスワップは起きていない）
+    if (gamePhase === 'waiting' && inputManager.isDragging &&
+        inputManager.dragStartCol !== null && inputManager.dragStartRow !== null) {
+        animationManager.addReleaseAnimation(inputManager.dragStartCol, inputManager.dragStartRow);
+    }
     inputManager.handleMouseReleased();
     return false;
 }
@@ -668,6 +690,10 @@ function executeSwap(fromCol, fromRow, toCol, toRow, type) {
         // 2つのピースがそれぞれの新しい位置へスライドするアニメーション
         animationManager.addSwapAnimation(toCol, toRow, fromCol, fromRow);
         animationManager.addSwapAnimation(fromCol, fromRow, toCol, toRow);
+
+        // 入れ替えるために離した瞬間も、両方のピースに同じバウンスをつける
+        animationManager.addReleaseAnimation(toCol, toRow);
+        animationManager.addReleaseAnimation(fromCol, fromRow);
 
         // ターンモードなら1ターン消費
         if (gameState && gameState.mode === 'turnmode') {

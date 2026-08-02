@@ -113,6 +113,20 @@ class AnimationManager {
     }
 
     /**
+     * 指を離した瞬間のバウンス演出を追加
+     * 95% → 105% → 100% を約0.12秒で行う
+     */
+    addReleaseAnimation(col, row) {
+        this.animations.push({
+            type: 'release',
+            col,
+            row,
+            startTime: Date.now(),
+            duration: 220
+        });
+    }
+
+    /**
      * 交換（スワップ）アニメーションを追加
      * col, row: このピースの交換後（現在）の位置
      * fromCol, fromRow: 交換前の位置
@@ -258,6 +272,21 @@ class AnimationManager {
                 if (anim.row !== row) continue;
                 const progress = this.getProgress(anim);
                 visuals.scale = 1 - 0.05 * progress;
+            }
+
+            // release は指を離した瞬間のバウンス（95%→105%→100%）
+            if (anim.type === 'release') {
+                if (anim.row !== row) continue;
+                const progress = this.getProgress(anim);
+                if (progress < 0.5) {
+                    const p = progress / 0.5;
+                    const eased = 1 - Math.pow(1 - p, 2);
+                    visuals.scale = 0.85 + eased * (1.22 - 0.85);
+                } else {
+                    const p = (progress - 0.5) / 0.5;
+                    const eased = 1 - Math.pow(1 - p, 2);
+                    visuals.scale = 1.22 + eased * (1 - 1.22);
+                }
             }
 
             // delete は anim.row と一致するピースに適用
