@@ -7,6 +7,7 @@ class MatchDetector {
         this.grid = grid;
         this.config = config;
         this.MIN_MATCH = 4; // 4つ以上で消える
+        this.diagonalEnabled = false; // フィーバータイム中は斜めもマッチ対象にする
         this.animationManager = null;
     }
 
@@ -15,23 +16,41 @@ class MatchDetector {
     }
 
     /**
+     * フィーバータイムのON/OFFを切り替える
+     * ON: 3つ揃いで消え、斜めのマッチも対象になる
+     * OFF: 通常通り4つ以上・縦横のみ
+     */
+    setFeverActive(active) {
+        this.MIN_MATCH = active ? 3 : 4;
+        this.diagonalEnabled = active;
+    }
+
+    /**
      * 全ボード内のマッチを検出
      * @returns {Array} マッチしたピースの位置 [{col, row}, ...]
      */
     detectAllMatches() {
         const matches = new Set();
-        
+
         // すべてのピースについてチェック
         for (let row = 0; row < this.grid.rows; row++) {
             for (let col = 0; col < this.grid.cols; col++) {
                 const horizontalMatches = this.findHorizontalMatches(col, row);
                 const verticalMatches = this.findVerticalMatches(col, row);
-                
+
                 horizontalMatches.forEach(pos => matches.add(JSON.stringify(pos)));
                 verticalMatches.forEach(pos => matches.add(JSON.stringify(pos)));
+
+                // フィーバータイム中は斜め方向のマッチも検出
+                if (this.diagonalEnabled) {
+                    const diagDown = this.findDiagonalMatches(col, row, 1); // ＼方向
+                    const diagUp = this.findDiagonalMatches(col, row, -1); // ／方向
+                    diagDown.forEach(pos => matches.add(JSON.stringify(pos)));
+                    diagUp.forEach(pos => matches.add(JSON.stringify(pos)));
+                }
             }
         }
-        
+
         return Array.from(matches).map(str => JSON.parse(str));
     }
 
@@ -88,6 +107,38 @@ class MatchDetector {
         }
 
         // 4つ以上でマッチ
+        return matches.length >= this.MIN_MATCH ? matches : [];
+    }
+
+    /**
+     * 指定位置からの斜め方向マッチを検出（フィーバータイム専用）
+     * @param {number} dir 1 なら＼方向（右下がり）、-1 なら／方向（右上がり）
+     */
+    findDiagonalMatches(col, row, dir) {
+        const piece = this.grid.getPiece(col, row);
+        if (!piece) return [];
+
+        const matches = [{ col, row }];
+        const color = piece.color;
+
+        // 左上（または左下）方向を探索
+        let c = col - 1;
+        let r = row - dir;
+        while (c >= 0 && r >= 0 && r < this.grid.rows && this.grid.getPiece(c, r)?.color === color) {
+            matches.push({ col: c, row: r });
+            c--;
+            r -= dir;
+        }
+
+        // 右下（または右上）方向を探索
+        c = col + 1;
+        r = row + dir;
+        while (c < this.grid.cols && r >= 0 && r < this.grid.rows && this.grid.getPiece(c, r)?.color === color) {
+            matches.push({ col: c, row: r });
+            c++;
+            r += dir;
+        }
+
         return matches.length >= this.MIN_MATCH ? matches : [];
     }
 

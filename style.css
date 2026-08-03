@@ -77,6 +77,67 @@ body {
     color: #c62828;
 }
 
+/* フィーバータイム表示 */
+.ui-fever {
+    background: linear-gradient(90deg, #ff9800, #ffd54f);
+    color: #7a2e00;
+    border: 1px solid #ff9800;
+    animation: fever-pulse 0.6s ease-in-out infinite alternate;
+}
+
+.ui-fever-label {
+    margin-bottom: 4px;
+    white-space: nowrap;
+}
+
+.ui-fever-bar-outer {
+    width: 100%;
+    height: 8px;
+    background: rgba(122, 46, 0, 0.25);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.ui-fever-bar-inner {
+    height: 100%;
+    background: #7a2e00;
+    border-radius: 4px;
+    transition: width 0.1s linear;
+}
+
+@keyframes fever-pulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.05); }
+}
+
+/* 消去数バー表示 */
+.ui-clear {
+    background: #e3f2fd;
+    border: 1px solid #64b5f6;
+    color: #0d47a1;
+}
+
+.ui-clear-label {
+    margin-bottom: 4px;
+    white-space: nowrap;
+    font-size: 14px;
+}
+
+.ui-clear-bar-outer {
+    width: 100%;
+    height: 8px;
+    background: rgba(13, 71, 161, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.ui-clear-bar-inner {
+    height: 100%;
+    background: #1e88e5;
+    border-radius: 4px;
+    transition: width 0.15s ease-out;
+}
+
 /* p5.jsキャンバス */
 canvas {
     display: block;

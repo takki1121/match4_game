@@ -18,6 +18,17 @@ const PIECE_COLORS = [
 // 削除後に一時的に空白にする待ち時間（ミリ秒）
 CONFIG.DELETE_PAUSE_MS = 300;
 
+// フィーバータイム設定
+// - 消去数バーが満タン（CLEAR_BAR_TIER_SIZE個）になったらフィーバータイムに突入
+//   （3つ揃い・斜めマッチが有効になり、スコアも倍になる）
+const FEVER_DURATION_MS = 8000;
+const FEVER_SCORE_MULTIPLIER = 2;
+let feverUntil = 0; // フィーバータイム終了時刻（ms since epoch）。0/過去なら非アクティブ
+
+// 消去数バー設定（消したピース数の累計をバーに溜めていく）
+const CLEAR_BAR_TIER_SIZE = 50; // このピース数でバーが満タンになり、次の周へ
+let totalCleared = 0; // これまでに消したピースの累計数
+
 let grid;
 let gameLogic;
 let inputManager;
@@ -78,6 +89,8 @@ function setup() {
         gamePhase = 'waiting';
         chainLevel = 0;
         animationManager.clear();
+        feverUntil = 0; // モード切替・リセット時はフィーバータイムも解除
+        totalCleared = 0; // 消去数バーもリセット
     };
 
     // タブイベント設定
@@ -121,9 +134,20 @@ function adjustPieceSizeToWindow() {
     CONFIG.PIECE_SIZE = size;
 }
 
+/**
+ * フィーバータイム中かどうか
+ */
+function isFeverActive() {
+    return Date.now() < feverUntil;
+}
+
 function draw() {
-    background(240);
-    
+    // フィーバータイム中は背景を暖色にして分かりやすくする
+    background(isFeverActive() ? color(255, 240, 190) : 240);
+
+    // マッチ判定の条件をフィーバー状態に同期（3つ揃い・斜めマッチの切り替え）
+    matchDetector.setFeverActive(isFeverActive());
+
     // アニメーション更新
     animationManager.updateAnimations();
 
@@ -200,6 +224,16 @@ function updateGameState() {
                 const deletedCount = matchDetector.removeMatches(matches);
                 console.log(`Deleted ${deletedCount} pieces (waiting before fall)`);
 
+                // 消去数バーに累計を加算。50を超えたらバーを0に戻してフィーバータイム発動
+                // （フィーバータイム中は消去数を増やさず0のままにする）
+                if (!isFeverActive()) {
+                    totalCleared += deletedCount;
+                    if (totalCleared >= CLEAR_BAR_TIER_SIZE) {
+                        totalCleared = 0;
+                        feverUntil = Date.now() + FEVER_DURATION_MS;
+                    }
+                }
+
                 // スコア加算（削除時点で加算）
                 const chainNumber = chainLevel + 1;
                 let score = scoringSystem.calculateScore(deletedCount, chainNumber);
@@ -207,6 +241,10 @@ function updateGameState() {
                 if (chainNumber > 1) {
                     const comboMultiplier = chainNumber * 1.3;
                     score = Math.floor(score * comboMultiplier);
+                }
+                // フィーバータイム中はスコアさらに倍
+                if (isFeverActive()) {
+                    score = Math.floor(score * FEVER_SCORE_MULTIPLIER);
                 }
                 gameState.score += score;
                 console.log(`Score: +${score} (total: ${gameState.score})`);
@@ -538,6 +576,54 @@ function renderUIToDOM() {
         turnsEl.className = 'ui-item';
         turnsEl.textContent = `Turns: ${gameState.turnsRemaining}`;
         ui.appendChild(turnsEl);
+    }
+
+    if (isFeverActive()) {
+        const remainingSec = Math.max(0, Math.ceil((feverUntil - Date.now()) / 1000));
+        const remainingRatio = Math.max(0, Math.min(1, (feverUntil - Date.now()) / FEVER_DURATION_MS));
+
+        const feverEl = document.createElement('div');
+        feverEl.className = 'ui-item ui-fever';
+
+        const feverLabel = document.createElement('div');
+        feverLabel.className = 'ui-fever-label';
+        feverLabel.textContent = `🔥 FEVER TIME! x${FEVER_SCORE_MULTIPLIER} (${remainingSec}s)`;
+        feverEl.appendChild(feverLabel);
+
+        // 残り時間バー
+        const barOuter = document.createElement('div');
+        barOuter.className = 'ui-fever-bar-outer';
+        const barInner = document.createElement('div');
+        barInner.className = 'ui-fever-bar-inner';
+        barInner.style.width = `${remainingRatio * 100}%`;
+        barOuter.appendChild(barInner);
+        feverEl.appendChild(barOuter);
+
+        ui.appendChild(feverEl);
+    }
+
+    // 消したピースの累計数をバーに溜めていく（CLEAR_BAR_TIER_SIZE個で満タン→0に戻ってフィーバー発動）
+    // フィーバータイム中は消去数バー自体を表示しない
+    if (!isFeverActive()) {
+        const clearRatio = Math.min(totalCleared / CLEAR_BAR_TIER_SIZE, 1);
+
+        const clearEl = document.createElement('div');
+        clearEl.className = 'ui-item ui-clear';
+
+        const clearLabel = document.createElement('div');
+        clearLabel.className = 'ui-clear-label';
+        clearLabel.textContent = `消去数: ${totalCleared}個`;
+        clearEl.appendChild(clearLabel);
+
+        const barOuter = document.createElement('div');
+        barOuter.className = 'ui-clear-bar-outer';
+        const barInner = document.createElement('div');
+        barInner.className = 'ui-clear-bar-inner';
+        barInner.style.width = `${clearRatio * 100}%`;
+        barOuter.appendChild(barInner);
+        clearEl.appendChild(barOuter);
+
+        ui.appendChild(clearEl);
     }
 }
 
