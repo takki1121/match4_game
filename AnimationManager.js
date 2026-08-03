@@ -9,64 +9,112 @@ class AnimationManager {
         this.particles = []; // 消去時のパーティクル
         this.config = null;
         this.comboPulse = null; // コンボ演出の状態
+        this.screenShake = null; // 画面揺れの状態（コンボ時のみ）
+
+        // 消去演出の各フェーズの時間（ミリ秒）
+        // ①一瞬縮む → ②少し大きくなる → ③白く光る → （④星・ハート飛散） → ⑤フェードアウト
+        // ①～④は視認しやすいようゆっくりめに設定
+        this.deletePhase = {
+            shrink: 80,
+            grow: 160,
+            flash: 90,
+            fade: 150
+        };
+        this.deletePhase.total =
+            this.deletePhase.shrink + this.deletePhase.grow + this.deletePhase.flash + this.deletePhase.fade;
     }
 
     /**
      * 消去アニメーションを追加
+     * ①一瞬縮む(0.03s) → ②1.15倍に膨らむ → ③白く光る(0.03s) → ④星・ハート飛散 → ⑤フェードアウト
      */
     addDeleteAnimation(col, row, colorIndex = null) {
+        let cx = null;
+        let cy = null;
+        if (this.config) {
+            const size = this.config.PIECE_SIZE;
+            const margin = this.config.MARGIN;
+            cx = col * (size + margin) + margin + size / 2;
+            cy = row * (size + margin) + margin + size / 2;
+        }
+
         this.animations.push({
             type: 'delete',
             col,
             row,
             startTime: Date.now(),
-            duration: this.animationDuration
+            duration: this.deletePhase.total,
+            colorIndex,
+            cx,
+            cy,
+            particlesSpawned: false
         });
+    }
 
-        // パーティクルを生成（パッというエフェクト）
-        if (this.config) {
-            const size = this.config.PIECE_SIZE;
-            const margin = this.config.MARGIN;
-            const cx = col * (size + margin) + margin + size / 2;
-            const cy = row * (size + margin) + margin + size / 2;
+    /**
+     * ④星・ハートが飛び散るパーティクルを生成
+     */
+    _spawnDeleteParticles(cx, cy, colorIndex) {
+        if (cx === null || cy === null) return;
 
-            const count = 8;
-            for (let i = 0; i < count; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 1 + Math.random() * 2;
-                this.particles.push({
-                    x: cx,
-                    y: cy,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed - 0.5,
-                    radius: 2 + Math.random() * 3,
-                    alpha: 255,
-                    life: 300 + Math.random() * 200,
-                    start: Date.now(),
-                    colorIndex: colorIndex
-                });
-            }
+        // 星パーティクル
+        const starCount = 4;
+        for (let i = 0; i < starCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 0.8 + Math.random() * 2;
+            this.particles.push({
+                x: cx + (Math.random() - 0.5) * 8,
+                y: cy + (Math.random() - 0.5) * 8,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 0.5,
+                radius: 8 + Math.random() * 7,
+                alpha: 255,
+                life: 400 + Math.random() * 300,
+                start: Date.now(),
+                colorIndex: colorIndex,
+                kind: 'star',
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.3
+            });
+        }
 
-            // 星スパークルを少数追加
-            const starCount = 3;
-            for (let i = 0; i < starCount; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 0.6 + Math.random() * 1.2;
-                this.particles.push({
-                    x: cx + (Math.random() - 0.5) * 8,
-                    y: cy + (Math.random() - 0.5) * 8,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed - 0.3,
-                    radius: 10 + Math.random() * 8,
-                    alpha: 255,
-                    life: 400 + Math.random() * 300,
-                    start: Date.now(),
-                    colorIndex: colorIndex,
-                    kind: 'star',
-                    rotation: Math.random() * Math.PI * 2,
-                    rotSpeed: (Math.random() - 0.5) * 0.2
-                });
-            }
+        // ハートパーティクル
+        const heartCount = 3;
+        for (let i = 0; i < heartCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 0.6 + Math.random() * 1.6;
+            this.particles.push({
+                x: cx + (Math.random() - 0.5) * 8,
+                y: cy + (Math.random() - 0.5) * 8,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 0.6,
+                radius: 7 + Math.random() * 6,
+                alpha: 255,
+                life: 450 + Math.random() * 300,
+                start: Date.now(),
+                colorIndex: colorIndex,
+                kind: 'heart',
+                rotation: (Math.random() - 0.5) * 0.6,
+                rotSpeed: (Math.random() - 0.5) * 0.15
+            });
+        }
+
+        // 細かい飛び散り粒
+        const count = 6;
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 1 + Math.random() * 2;
+            this.particles.push({
+                x: cx,
+                y: cy,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 0.5,
+                radius: 2 + Math.random() * 3,
+                alpha: 255,
+                life: 300 + Math.random() * 200,
+                start: Date.now(),
+                colorIndex: colorIndex
+            });
         }
     }
 
@@ -139,7 +187,7 @@ class AnimationManager {
             fromCol,
             fromRow,
             startTime: Date.now(),
-            duration: this.animationDuration
+            duration: 150 // 入れ替えはテンポよく感じられるよう短めに
         });
     }
 
@@ -176,6 +224,17 @@ class AnimationManager {
      */
     updateAnimations() {
         const now = Date.now();
+
+        // ④白く光った直後のタイミングで星・ハートを飛び散らせる
+        const spawnAt = this.deletePhase.shrink + this.deletePhase.grow + this.deletePhase.flash;
+        for (const anim of this.animations) {
+            if (anim.type !== 'delete' || anim.particlesSpawned) continue;
+            if (now - anim.startTime >= spawnAt) {
+                this._spawnDeleteParticles(anim.cx, anim.cy, anim.colorIndex);
+                anim.particlesSpawned = true;
+            }
+        }
+
         this.animations = this.animations.filter(anim => {
             const progress = this.getProgress(anim);
             return progress < 1;
@@ -202,6 +261,40 @@ class AnimationManager {
                 this.comboPulse = null;
             }
         }
+
+        // 画面揺れの終了チェック
+        if (this.screenShake) {
+            if (Date.now() - this.screenShake.start > this.screenShake.duration) {
+                this.screenShake = null;
+            }
+        }
+    }
+
+    /**
+     * ⑥画面が少し揺れる演出を追加（コンボ時のみ呼び出す想定）
+     */
+    addScreenShake(intensity = 6, duration = 250) {
+        this.screenShake = {
+            start: Date.now(),
+            duration,
+            intensity
+        };
+    }
+
+    /**
+     * 現在の画面揺れオフセットを取得（{x, y}）。揺れていなければ {x:0, y:0}
+     */
+    getScreenShakeOffset() {
+        if (!this.screenShake) return { x: 0, y: 0 };
+        const elapsed = Date.now() - this.screenShake.start;
+        const progress = Math.min(elapsed / this.screenShake.duration, 1);
+        // 時間とともに減衰させる
+        const damp = 1 - progress;
+        const amount = this.screenShake.intensity * damp;
+        return {
+            x: (Math.random() - 0.5) * 2 * amount,
+            y: (Math.random() - 0.5) * 2 * amount
+        };
     }
 
     /**
@@ -261,7 +354,8 @@ class AnimationManager {
             alpha: 255,
             scale: 1,
             offsetX: 0,
-            offsetY: 0
+            offsetY: 0,
+            flashAlpha: 0
         };
 
         for (let anim of this.animations) {
@@ -290,11 +384,36 @@ class AnimationManager {
             }
 
             // delete は anim.row と一致するピースに適用
+            // ①一瞬縮む → ②1.15倍に膨らむ → ③白く光る → ⑤フェードアウト
             if (anim.type === 'delete') {
                 if (anim.row !== row) continue;
-                const progress = this.getProgress(anim);
-                visuals.alpha = 255 * (1 - progress);
-                visuals.scale = 1 + Math.sin(progress * Math.PI) * 0.6 * (1 - progress);
+                const elapsed = Date.now() - anim.startTime;
+                const { shrink, grow, flash, fade } = this.deletePhase;
+
+                if (elapsed < shrink) {
+                    // ①一瞬縮む（1.0 → 0.85）
+                    const p = elapsed / shrink;
+                    visuals.scale = 1 + (0.85 - 1) * p;
+                    visuals.alpha = 255;
+                } else if (elapsed < shrink + grow) {
+                    // ②少し大きくなる（0.85 → 1.15）
+                    const p = (elapsed - shrink) / grow;
+                    const eased = 1 - Math.pow(1 - p, 2);
+                    visuals.scale = 0.85 + eased * (1.15 - 0.85);
+                    visuals.alpha = 255;
+                } else if (elapsed < shrink + grow + flash) {
+                    // ③白く光る（大きさ1.15を保ったまま白フラッシュ）
+                    const p = (elapsed - shrink - grow) / flash;
+                    visuals.scale = 1.15;
+                    visuals.alpha = 255;
+                    visuals.flashAlpha = 255 * Math.sin(Math.min(p, 1) * Math.PI);
+                } else {
+                    // ⑤本体がフェードアウト
+                    const p = Math.min((elapsed - shrink - grow - flash) / fade, 1);
+                    visuals.scale = 1.15;
+                    visuals.alpha = 255 * (1 - p);
+                    visuals.flashAlpha = 0;
+                }
             }
 
             // fall は最終到達行（toRow）にいるピースに対して表示を調整

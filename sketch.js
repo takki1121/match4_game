@@ -131,14 +131,20 @@ function draw() {
     gameState.tick(deltaTime);
     updateGameState();
     
+    // ⑥コンボ時の画面の揺れを適用してグリッドを描画
+    const shake = animationManager.getScreenShakeOffset();
+    push();
+    translate(shake.x, shake.y);
+
     // グリッドの描画
     drawGridWithHighlight();
-    
+
     // 選択ピースのハイライト表示
     if (selectedPiece) {
         highlightSelectedPiece();
     }
-    
+    pop();
+
     // UI情報の表示
     displayUI();
     renderUIToDOM();
@@ -212,6 +218,9 @@ function updateGameState() {
                     const centerX = width / 2;
                     const centerY = CONFIG.MARGIN + 40; // グリッド上部あたりに表示
                     animationManager.addComboBurst(centerX, centerY, chainLevel);
+                    // ⑥コンボ時のみ画面を少し揺らす（8コンボで頭打ち）
+                    const shakeIntensity = Math.min(chainLevel, 8);
+                    animationManager.addScreenShake(3 + shakeIntensity * 1.5, 250);
                     // コンボ表示タイマー（UI描画用）
                     window.currentCombo = {
                         count: chainLevel,
@@ -327,6 +336,13 @@ function drawGridWithHighlight() {
                     circle(0, 0, size - 4);
                 }
 
+                // ③消去時：白く光るオーバーレイ
+                if (visuals.flashAlpha > 0) {
+                    noStroke();
+                    fill(255, 255, 255, visuals.flashAlpha);
+                    circle(0, 0, size - 4);
+                }
+
                 pop();
             }
         }
@@ -358,6 +374,20 @@ function drawGridWithHighlight() {
                 const vy = Math.sin(angle) * r;
                 vertex(vx, vy);
             }
+            endShape(CLOSE);
+            pop();
+        } else if (p.kind === 'heart') {
+            push();
+            translate(p.x, p.y);
+            rotate(p.rotation || 0);
+            noStroke();
+            fill(...fillColor, p.alpha);
+            const s = p.radius;
+            // シンプルなハート形状（ベジェ曲線）
+            beginShape();
+            vertex(0, s * 0.35);
+            bezierVertex(s * 0.55, -s * 0.35, s * 1.1, s * 0.15, 0, s * 0.85);
+            bezierVertex(-s * 1.1, s * 0.15, -s * 0.55, -s * 0.35, 0, s * 0.35);
             endShape(CLOSE);
             pop();
         } else {
