@@ -23,11 +23,16 @@ CONFIG.DELETE_PAUSE_MS = 300;
 //   （3つ揃い・斜めマッチが有効になり、スコアも倍になる）
 const FEVER_DURATION_MS = 8000;
 const FEVER_SCORE_MULTIPLIER = 2;
+const FEVER_TRANSITION_DELAY_MS = 500; // ゲージが満タンになってからフィーバー突入までの間（0.5秒）
 let feverUntil = 0; // フィーバータイム終了時刻（ms since epoch）。0/過去なら非アクティブ
+let feverPendingUntil = 0; // フィーバー移行待ち終了時刻（0なら待機していない）
 
 // 消去数バー設定（消したピース数の累計をバーに溜めていく）
 const CLEAR_BAR_TIER_SIZE = 50; // このピース数でバーが満タンになり、次の周へ
 let totalCleared = 0; // これまでに消したピースの累計数
+
+// スマホ表示時はゲージをプレイ画面下の横向き専用枠に表示する
+const mobileGaugeMQ = window.matchMedia('(max-width: 700px)');
 
 let grid;
 let gameLogic;
@@ -90,6 +95,7 @@ function setup() {
         chainLevel = 0;
         animationManager.clear();
         feverUntil = 0; // モード切替・リセット時はフィーバータイムも解除
+        feverPendingUntil = 0; // フィーバー移行待ちも解除
         totalCleared = 0; // 消去数バーもリセット
     };
 
@@ -141,7 +147,21 @@ function isFeverActive() {
     return Date.now() < feverUntil;
 }
 
+/**
+ * ゲージが満タンになり、フィーバータイム突入を待っている最中かどうか
+ */
+function isFeverPending() {
+    return feverPendingUntil > 0 && Date.now() < feverPendingUntil;
+}
+
 function draw() {
+    // 待機時間が経過したらフィーバータイムへ移行（ゲージはここでリセット）
+    if (feverPendingUntil > 0 && Date.now() >= feverPendingUntil) {
+        feverPendingUntil = 0;
+        totalCleared = 0;
+        feverUntil = Date.now() + FEVER_DURATION_MS;
+    }
+
     // フィーバータイム中は背景を暖色にして分かりやすくする
     background(isFeverActive() ? color(255, 240, 190) : 240);
 
@@ -224,13 +244,12 @@ function updateGameState() {
                 const deletedCount = matchDetector.removeMatches(matches);
                 console.log(`Deleted ${deletedCount} pieces (waiting before fall)`);
 
-                // 消去数バーに累計を加算。50を超えたらバーを0に戻してフィーバータイム発動
-                // （フィーバータイム中は消去数を増やさず0のままにする）
-                if (!isFeverActive()) {
+                // 消去数バーに累計を加算。満タンになったら0.1秒待ってからフィーバータイム発動
+                // （フィーバータイム中・移行待ち中は消去数を増やさない）
+                if (!isFeverActive() && !isFeverPending()) {
                     totalCleared += deletedCount;
                     if (totalCleared >= CLEAR_BAR_TIER_SIZE) {
-                        totalCleared = 0;
-                        feverUntil = Date.now() + FEVER_DURATION_MS;
+                        feverPendingUntil = Date.now() + FEVER_TRANSITION_DELAY_MS;
                     }
                 }
 
@@ -557,13 +576,13 @@ function renderUIToDOM() {
     ui.innerHTML = '';
 
     const scoreEl = document.createElement('div');
-    scoreEl.className = 'ui-item';
-    scoreEl.textContent = `Score: ${gameState.score}`;
+    scoreEl.className = 'ui-item ui-score';
+    scoreEl.textContent = `${gameState.score}`;
     ui.appendChild(scoreEl);
 
     const modeEl = document.createElement('div');
-    modeEl.className = 'ui-item';
-    modeEl.textContent = `Mode: ${gameState.mode}`;
+    modeEl.className = 'ui-item ui-mode';
+    modeEl.textContent = `${gameState.mode}`;
     ui.appendChild(modeEl);
 
     if (gameState.mode === 'timemode') {
@@ -578,52 +597,45 @@ function renderUIToDOM() {
         ui.appendChild(turnsEl);
     }
 
+    // 消去数ゲージとフィーバーゲージを1つのバーとして共用する。
+    // 通常時: 消去数（0〜CLEAR_BAR_TIER_SIZE）を溜めていくゲージ
+    // フィーバー中: 同じ枠をそのまま使い、残り時間が減っていくゲージに切り替える
+    // スマホ表示ではサイドバーが狭すぎるので、プレイ画面下の横向き専用枠に表示する
+    const mobileGaugeContainer = document.getElementById('mobile-gauge-container');
+    const isMobileGauge = !!(mobileGaugeContainer && mobileGaugeMQ.matches);
+    if (mobileGaugeContainer) mobileGaugeContainer.innerHTML = '';
+
+    const gaugeEl = document.createElement('div');
+    let ratio;
+
     if (isFeverActive()) {
-        const remainingSec = Math.max(0, Math.ceil((feverUntil - Date.now()) / 1000));
-        const remainingRatio = Math.max(0, Math.min(1, (feverUntil - Date.now()) / FEVER_DURATION_MS));
-
-        const feverEl = document.createElement('div');
-        feverEl.className = 'ui-item ui-fever';
-
-        const feverLabel = document.createElement('div');
-        feverLabel.className = 'ui-fever-label';
-        feverLabel.textContent = `🔥 FEVER TIME! x${FEVER_SCORE_MULTIPLIER} (${remainingSec}s)`;
-        feverEl.appendChild(feverLabel);
-
-        // 残り時間バー
-        const barOuter = document.createElement('div');
-        barOuter.className = 'ui-fever-bar-outer';
-        const barInner = document.createElement('div');
-        barInner.className = 'ui-fever-bar-inner';
-        barInner.style.width = `${remainingRatio * 100}%`;
-        barOuter.appendChild(barInner);
-        feverEl.appendChild(barOuter);
-
-        ui.appendChild(feverEl);
+        ratio = Math.max(0, Math.min(1, (feverUntil - Date.now()) / FEVER_DURATION_MS));
+        gaugeEl.className = 'ui-item ui-clear ui-fever';
+    } else {
+        ratio = Math.min(totalCleared / CLEAR_BAR_TIER_SIZE, 1);
+        gaugeEl.className = 'ui-item ui-clear';
     }
 
-    // 消したピースの累計数をバーに溜めていく（CLEAR_BAR_TIER_SIZE個で満タン→0に戻ってフィーバー発動）
-    // フィーバータイム中は消去数バー自体を表示しない
-    if (!isFeverActive()) {
-        const clearRatio = Math.min(totalCleared / CLEAR_BAR_TIER_SIZE, 1);
+    const barOuter = document.createElement('div');
+    barOuter.className = 'ui-clear-bar-outer';
+    // barOuter の背景（青→オレンジの固定グラデーション）を、未達成の割合だけ
+    // 覆い隠すことで、常にトラック全体基準の色（50%なら中間色、100%なら
+    // 端までオレンジ）が見えるようにする。
+    // 縦ゲージ（PC）は上から高さで覆い、横ゲージ（スマホ）は右から幅で覆う
+    const barCover = document.createElement('div');
+    barCover.className = 'ui-clear-bar-inner';
+    if (isMobileGauge) {
+        barCover.style.width = `${(1 - ratio) * 100}%`;
+    } else {
+        barCover.style.height = `${(1 - ratio) * 100}%`;
+    }
+    barOuter.appendChild(barCover);
+    gaugeEl.appendChild(barOuter);
 
-        const clearEl = document.createElement('div');
-        clearEl.className = 'ui-item ui-clear';
-
-        const clearLabel = document.createElement('div');
-        clearLabel.className = 'ui-clear-label';
-        clearLabel.textContent = `消去数: ${totalCleared}個`;
-        clearEl.appendChild(clearLabel);
-
-        const barOuter = document.createElement('div');
-        barOuter.className = 'ui-clear-bar-outer';
-        const barInner = document.createElement('div');
-        barInner.className = 'ui-clear-bar-inner';
-        barInner.style.width = `${clearRatio * 100}%`;
-        barOuter.appendChild(barInner);
-        clearEl.appendChild(barOuter);
-
-        ui.appendChild(clearEl);
+    if (isMobileGauge) {
+        mobileGaugeContainer.appendChild(gaugeEl);
+    } else {
+        ui.appendChild(gaugeEl);
     }
 }
 

@@ -6,7 +6,9 @@
 }
 
 body {
-    font-family: 'Arial', sans-serif;
+    /* 英字・数字は可愛い丸ゴシック「Fredoka」で表示し、
+       日本語などFredokaに無い文字は自動でArialにフォールバックする */
+    font-family: 'Fredoka', 'Arial', sans-serif;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -56,6 +58,11 @@ body {
     justify-content: center;
 }
 
+/* スマホ表示時のみ使う横向きゲージ枠（デスクトップでは非表示） */
+#mobile-gauge-container {
+    display: none;
+}
+
 #ui-container {
     display: flex;
     flex-direction: column;
@@ -63,6 +70,7 @@ body {
     font-size: 16px;
     font-weight: bold;
     min-width: 160px;
+    align-self: stretch; /* 高さをキャンバス側に合わせ、余白をゲージに使えるようにする */
 }
 
 .ui-item {
@@ -77,44 +85,27 @@ body {
     color: #c62828;
 }
 
-/* フィーバータイム表示 */
-.ui-fever {
-    background: linear-gradient(90deg, #ff9800, #ffd54f);
-    color: #7a2e00;
-    border: 1px solid #ff9800;
-    animation: fever-pulse 0.6s ease-in-out infinite alternate;
+.ui-score {
+    font-size: 32px;
+    color: #333;
 }
 
-.ui-fever-label {
-    margin-bottom: 4px;
-    white-space: nowrap;
+.ui-mode {
+    font-size: 24px;
+    text-transform: capitalize;
+    color: #555;
 }
 
-.ui-fever-bar-outer {
-    width: 100%;
-    height: 8px;
-    background: rgba(122, 46, 0, 0.25);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.ui-fever-bar-inner {
-    height: 100%;
-    background: #7a2e00;
-    border-radius: 4px;
-    transition: width 0.1s linear;
-}
-
-@keyframes fever-pulse {
-    from { transform: scale(1); }
-    to { transform: scale(1.05); }
-}
-
-/* 消去数バー表示 */
+/* 消去数ゲージ表示（通常時は消去数、フィーバー中は同じ枠を残り時間ゲージとして共用） */
 .ui-clear {
-    background: #e3f2fd;
-    border: 1px solid #64b5f6;
-    color: #0d47a1;
+    /* 枠の色はスコアの枠（.ui-item既定）と同じ色に合わせる */
+    background: #f8f8f8;
+    border: 1px solid #eee;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* #ui-container内の余った縦スペースを全部ゲージに回す */
+    min-height: 0;
 }
 
 .ui-clear-label {
@@ -124,18 +115,52 @@ body {
 }
 
 .ui-clear-bar-outer {
-    width: 100%;
-    height: 8px;
-    background: rgba(13, 71, 161, 0.15);
-    border-radius: 4px;
+    position: relative;
+    width: 40px;
+    flex: 1; /* 親(.ui-clear)の高さいっぱいまで伸ばす */
+    min-height: 60px;
+    margin: 0 auto;
+    /* トラック全体で固定の青→オレンジのグラデーション。
+       100%溜まると一番上までオレンジ、50%ならグラデーションの中間色になる。
+       青→オレンジを直接混ぜると中間がくすむため、明るい黄色を挟んで明度を上げている */
+    background: linear-gradient(to top, #1e88e5 0%, #ffd54f 50%, #ff9800 100%);
+    border-radius: 16px;
+    border: 2px solid #333;
     overflow: hidden;
 }
 
+/* 未達成の割合だけ上から覆い隠すカバー。ここが伸び縮みすることで
+   下から「まだ塗られていない見た目」を作る */
 .ui-clear-bar-inner {
-    height: 100%;
-    background: #1e88e5;
-    border-radius: 4px;
-    transition: width 0.15s ease-out;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #f8f8f8;
+    border-radius: 16px 16px 0 0;
+    transition: height 0.15s ease-out;
+}
+
+/* フィーバータイム中は同じゲージを暖色に切り替える */
+.ui-clear.ui-fever {
+    background: linear-gradient(90deg, #ff9800, #ffd54f);
+    color: #7a2e00;
+    border: 1px solid #ff9800;
+    animation: fever-pulse 0.6s ease-in-out infinite alternate;
+}
+
+.ui-clear.ui-fever .ui-clear-bar-outer {
+    background: linear-gradient(to top, #ffb74d, #ff9800);
+}
+
+.ui-clear.ui-fever .ui-clear-bar-inner {
+    background: rgba(122, 46, 0, 0.35);
+    transition: height 0.1s linear;
+}
+
+@keyframes fever-pulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.05); }
 }
 
 /* p5.jsキャンバス */
@@ -204,7 +229,7 @@ canvas {
     }
 
     #highscores-panel {
-        order: 3;
+        order: 4;
         width: 100%;
         border-right: none;
         border-bottom: 1px solid #eee;
@@ -219,7 +244,7 @@ canvas {
     }
 
     /* スコア/モード/残り時間はスクロールせずに常に見えるよう、
-       一番上に固定表示する */
+       一番上に固定表示する（ゲージはここから下の専用枠に移動） */
     #ui-container {
         order: 1;
         position: sticky;
@@ -230,10 +255,51 @@ canvas {
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
+        align-self: auto;
         background: rgba(255, 255, 255, 0.97);
         padding: 8px 6px;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    /* プレイ画面の下に表示する、横向きの大きいフィーバーゲージ枠 */
+    #mobile-gauge-container {
+        display: block;
+        order: 3;
+        width: 100%;
+        padding: 10px 14px;
+        background: #eee;
+        border: 2px solid #999;
+        border-radius: 12px;
+    }
+
+    #mobile-gauge-container .ui-item.ui-clear {
+        display: block;
+        width: 100%;
+        flex: none;
+        padding: 0;
+        background: transparent;
+        border: none;
+    }
+
+    #mobile-gauge-container .ui-clear-bar-outer {
+        position: relative;
+        width: 100%;
+        height: 40px;
+        min-height: 0;
+        flex: none;
+        margin: 0;
+        background: linear-gradient(to right, #1e88e5 0%, #ffd54f 50%, #ff9800 100%);
+    }
+
+    #mobile-gauge-container .ui-clear-bar-inner {
+        top: 0;
+        bottom: 0;
+        left: auto;
+        right: 0;
+        width: 100%;
+        height: auto;
+        border-radius: 0 14px 14px 0;
     }
 
     .tab-bar {
