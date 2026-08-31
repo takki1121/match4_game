@@ -26,6 +26,18 @@
         <button id="tab-freeplay" class="tab active">フリープレイ</button>
     </div>
 
+    <!-- ハイスコア登録時の名前入力モーダル -->
+    <div id="name-input-modal" class="modal-overlay" hidden>
+        <div class="modal-box">
+            <p id="name-input-message" class="modal-message"></p>
+            <input type="text" id="name-input-field" class="modal-input" maxlength="20" autocomplete="off">
+            <div class="modal-buttons">
+                <button id="name-input-cancel" class="modal-btn modal-btn-cancel">キャンセル</button>
+                <button id="name-input-ok" class="modal-btn modal-btn-ok">OK</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ゲームロジックファイル -->
     <script src="Piece.js"></script>
     <script src="Grid.js"></script>

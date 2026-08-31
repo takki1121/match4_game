@@ -595,7 +595,7 @@ function renderUIToDOM() {
         ui.appendChild(timeEl);
     } else if (gameState.mode === 'turnmode') {
         const turnsEl = document.createElement('div');
-        turnsEl.className = 'ui-item';
+        turnsEl.className = 'ui-item ui-turns';
         turnsEl.textContent = `Turns: ${gameState.turnsRemaining}`;
         ui.appendChild(turnsEl);
     }
@@ -841,6 +841,52 @@ function executeSwap(fromCol, fromRow, toCol, toRow, type) {
     return success;
 }
 
+// ハイスコア登録時の名前入力をモーダルで行う。OKなら入力値（空なら defaultName）、
+// キャンセルなら null を resolve する
+function showNameInputModal(message, defaultName) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('name-input-modal');
+        const messageEl = document.getElementById('name-input-message');
+        const inputEl = document.getElementById('name-input-field');
+        const okBtn = document.getElementById('name-input-ok');
+        const cancelBtn = document.getElementById('name-input-cancel');
+        if (!modal || !messageEl || !inputEl || !okBtn || !cancelBtn) {
+            resolve(defaultName);
+            return;
+        }
+
+        messageEl.textContent = message;
+        inputEl.value = defaultName;
+        modal.hidden = false;
+        inputEl.focus();
+        inputEl.select();
+
+        function cleanup() {
+            modal.hidden = true;
+            okBtn.removeEventListener('click', onOk);
+            cancelBtn.removeEventListener('click', onCancel);
+            inputEl.removeEventListener('keydown', onKeydown);
+        }
+        function onOk() {
+            const value = inputEl.value.trim();
+            cleanup();
+            resolve(value || defaultName);
+        }
+        function onCancel() {
+            cleanup();
+            resolve(null);
+        }
+        function onKeydown(e) {
+            if (e.key === 'Enter') onOk();
+            else if (e.key === 'Escape') onCancel();
+        }
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        inputEl.addEventListener('keydown', onKeydown);
+    });
+}
+
 // ゲーム終了時のハンドラ：タイム/ターンモードでランキング入りする場合のみ保存
 window.onGameEnd = function(state) {
     if (!window.HighscoreAPI) return;
@@ -855,20 +901,16 @@ window.onGameEnd = function(state) {
 
         // 名前を尋ねて登録（簡易実装）。キャンセルされたら匿名 'anonymous' を利用
         const defaultName = 'player';
-        let name = null;
-        try {
-            name = window.prompt('ハイスコア！名前を入力してください（キャンセルで匿名）', defaultName);
-        } catch (e) {
-            name = defaultName;
-        }
-        if (name === null) name = 'anonymous';
+        showNameInputModal('ハイスコア！名前を入力してください', defaultName).then(name => {
+            if (name === null) name = 'anonymous';
 
-        HighscoreAPI.submitHighscore(mode, name, state.score)
-            .then(() => {
-                // DOM を更新
-                if (typeof renderHighscoresToDOM === 'function') renderHighscoresToDOM();
-            })
-            .catch(err => console.warn('Failed to submit highscore', err));
+            HighscoreAPI.submitHighscore(mode, name, state.score)
+                .then(() => {
+                    // DOM を更新
+                    if (typeof renderHighscoresToDOM === 'function') renderHighscoresToDOM();
+                })
+                .catch(err => console.warn('Failed to submit highscore', err));
+        });
     }).catch(err => console.warn('Failed to fetch highscores', err));
 };
 
@@ -884,18 +926,14 @@ window.onLeaveFreeplay = function(state) {
         if (!qualifies) return;
 
         const defaultName = 'player';
-        let name = null;
-        try {
-            name = window.prompt('フリープレイのスコアがランキング入りしました。名前を入力してください（キャンセルで匿名）', defaultName);
-        } catch (e) {
-            name = defaultName;
-        }
-        if (name === null) name = 'anonymous';
+        showNameInputModal('フリープレイのスコアがランキング入りしました。名前を入力してください', defaultName).then(name => {
+            if (name === null) name = 'anonymous';
 
-        HighscoreAPI.submitHighscore(mode, name, state.score)
-            .then(() => {
-                if (typeof renderHighscoresToDOM === 'function') renderHighscoresToDOM();
-            })
-            .catch(err => console.warn('Failed to submit freeplay highscore', err));
+            HighscoreAPI.submitHighscore(mode, name, state.score)
+                .then(() => {
+                    if (typeof renderHighscoresToDOM === 'function') renderHighscoresToDOM();
+                })
+                .catch(err => console.warn('Failed to submit freeplay highscore', err));
+        });
     }).catch(err => console.warn('Failed to fetch freeplay highscores', err));
 };
