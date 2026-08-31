@@ -21,7 +21,7 @@ CONFIG.DELETE_PAUSE_MS = 300;
 // フィーバータイム設定
 // - 消去数バーが満タン（CLEAR_BAR_TIER_SIZE個）になったらフィーバータイムに突入
 //   （3つ揃い・斜めマッチが有効になり、スコアも倍になる）
-const FEVER_DURATION_MS = 8000;
+const FEVER_DURATION_MS = 10000;
 const FEVER_SCORE_MULTIPLIER = 2;
 const FEVER_TRANSITION_DELAY_MS = 500; // ゲージが満タンになってからフィーバー突入までの間（0.5秒）
 let feverUntil = 0; // フィーバータイム終了時刻（ms since epoch）。0/過去なら非アクティブ
@@ -46,7 +46,8 @@ let highlightedPositions = [];
 let cachedHighscores = [];
 let cachedHighscoresMode = null;
 let textures = [];
-let comboImages = []; // comboImages[1]～comboImages[8]：Nコンボ表示用画像
+let comboImages = []; // comboImages[1]～comboImages[10]：Nコンボ表示用画像
+let perfectImage; // 11コンボ以上で表示するPERFECT画像
 
 // ゲームフロー制御
 let gamePhase = 'waiting'; // 'waiting', 'matching', 'animating', 'falling'
@@ -116,10 +117,11 @@ function preload() {
     textures[2] = loadImage('img/pink.png');
     textures[3] = loadImage('img/yellow.png');
 
-    // コンボ数表示用画像（1com.png ～ 8com.png、8コンボ以上は8com.pngを使い回す）
-    for (let i = 1; i <= 8; i++) {
+    // コンボ数表示用画像（1com.png ～ 10com.png、11コンボ以上はperfect.pngを表示）
+    for (let i = 1; i <= 10; i++) {
         comboImages[i] = loadImage(`img/${i}com.png`);
     }
+    perfectImage = loadImage('img/perfect.png');
 }
 
 function windowResized() {
@@ -468,9 +470,10 @@ function drawGridWithHighlight() {
         // 大きいコンボ画像（Nコンボ！の文字画像）
         if (window.currentCombo && Date.now() < window.currentCombo.until) {
             const combo = window.currentCombo.count;
-            // 画像の派手さ（大きさ）も8コンボで頭打ちにする（それ以上は同じ大きさのまま、9com.png以降は無いので8com.pngを使い回す）
-            const comboIntensity = Math.min(combo, 8);
-            const comboImg = comboImages[comboIntensity];
+            // 画像の派手さ（大きさ）は10コンボで頭打ちにする（それ以上は同じ大きさのまま）
+            const comboIntensity = Math.min(combo, 10);
+            // 11コンボ以上はperfect.pngを表示する
+            const comboImg = combo >= 11 ? perfectImage : comboImages[comboIntensity];
             if (comboImg) {
                 push();
                 const scaleFactor = 1 + 0.6 * (1 - Math.abs(0.5 - t) * 2);
