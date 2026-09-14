@@ -1,373 +1,563 @@
-/* グローバルスタイル */
+/* =========================================================
+   ピクセルアート宇宙テーマ
+   ========================================================= */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+:root {
+    --space-0: #0c0a1a;      /* 一番外の背景 */
+    --space-1: #1b1636;      /* カード背景 */
+    --panel:   #241d47;      /* 各パネル背景 */
+    --panel-2: #1c1740;      /* 内側の暗い面（盤面など） */
+    --border:  #4b3d8f;      /* パネル枠 */
+    --border-lite: #7b6bd6;  /* 明るい枠ハイライト */
+    --gold:    #ffd23f;
+    --cyan:    #6fd8ff;
+    --pink:    #ff8ad2;
+    --text:    #e9e6ff;
+    --text-dim:#a89fd8;
+}
+
 body {
-    /* 英字・数字は可愛い丸ゴシック「Fredoka」で表示し、
-       日本語などFredokaに無い文字は自動でArialにフォールバックする */
-    font-family: 'Fredoka', 'Arial', sans-serif;
+    /* 数字・英字は丸ゴシック Fredoka、日本語は DotGothic16 にフォールバック */
+    font-family: 'Fredoka', 'DotGothic16', 'Arial', sans-serif;
+    position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 24px;
+    color: var(--text);
+    overflow-x: hidden;
+    background: var(--space-0) url('img/haikei.png') center / cover no-repeat;
+}
+
+#container { position: relative; z-index: 1; }
+
+/* 見出し用ピクセルフォント */
+.pixel {
+    font-family: 'Press Start 2P', 'DotGothic16', monospace;
+    letter-spacing: 0.5px;
 }
 
 #container {
+    position: relative;
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
-    gap: 20px;
-    padding: 20px;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    align-items: stretch;
+    gap: 18px;
+    padding: 22px;
+    max-width: calc(100vw - 48px);
+    background:
+        radial-gradient(circle at 12% 8%, rgba(255,255,255,0.05) 0 2px, transparent 3px),
+        radial-gradient(circle at 68% 24%, rgba(255,255,255,0.05) 0 2px, transparent 3px),
+        radial-gradient(circle at 88% 62%, rgba(255,255,255,0.04) 0 2px, transparent 3px),
+        radial-gradient(circle at 32% 82%, rgba(255,255,255,0.05) 0 2px, transparent 3px),
+        linear-gradient(160deg, #241c46 0%, #1a1436 55%, #211a44 100%);
+    border-radius: 18px;
+    /* ピクセル風の二重枠 */
+    border: 4px solid var(--border-lite);
+    box-shadow:
+        0 0 0 4px var(--space-0),
+        0 0 0 8px #2f2661,
+        0 18px 50px rgba(0, 0, 0, 0.55),
+        inset 0 0 40px rgba(80, 40, 160, 0.35);
 }
 
-/* サイドバー：ハイスコア */
+/* ---------- 左カラム ---------- */
+#left-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 210px;
+    flex: 0 0 210px;
+}
+
+/* パネル共通の見た目 */
+.panel-box {
+    background: var(--panel);
+    border: 3px solid var(--border);
+    border-radius: 14px;
+    box-shadow:
+        inset 0 0 0 2px rgba(123, 107, 214, 0.25),
+        inset 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- ハイスコア ---------- */
 #highscores-panel {
-    width: 180px;
-    min-height: 200px;
-    padding: 12px;
-    background: #fff;
-    border-right: 1px solid #eee;
-    color: #222;
+    padding: 14px 14px 16px;
+    background: var(--panel);
+    border: 3px solid var(--border);
+    border-radius: 14px;
+    box-shadow:
+        inset 0 0 0 2px rgba(123, 107, 214, 0.25),
+        inset 0 2px 12px rgba(0, 0, 0, 0.35);
 }
 
-#highscores-panel h3 {
-    margin-bottom: 8px;
-    font-size: 20px;
+.hs-title {
+    font-family: 'Press Start 2P', 'DotGothic16', monospace;
+    font-size: 10px;
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 12px;
+    white-space: nowrap;
+    letter-spacing: 0;
+    text-shadow: 0 2px 0 #7a4a00, 0 0 10px rgba(255, 210, 63, 0.5);
 }
 
-#highscores-panel ul {
+.hs-list {
     list-style: none;
-    margin: 0;
-    padding: 0;
-    font-size: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-#highscores-panel li {
-    margin-bottom: 6px;
+.hs-item {
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 8px;
+    align-items: center;
+    padding: 8px 8px;
+    background: rgba(0, 0, 0, 0.22);
+    border-radius: 9px;
+    border: 2px solid rgba(123, 107, 214, 0.28);
+}
+
+.hs-rank {
+    grid-row: 1 / 3;
+    font-size: 16px;
+    text-align: center;
+}
+
+.hs-name {
+    font-size: 14px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hs-score {
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--gold);
+}
+
+.hs-item.rank-1 { border-color: #ffd23f; box-shadow: 0 0 12px rgba(255, 210, 63, 0.3); }
+.hs-item.rank-1 .hs-score { color: #ffde63; }
+.hs-item.rank-2 .hs-score { color: #d6def0; }
+.hs-item.rank-3 .hs-score { color: #ffb066; }
+
+/* ---------- ミッション ---------- */
+#mission-panel {
+    padding: 14px 14px 18px;
+    text-align: center;
+    background: var(--panel);
+    border: 3px solid var(--pink);
+    border-radius: 14px;
+    box-shadow:
+        inset 0 0 0 2px rgba(255, 138, 210, 0.22),
+        0 0 16px rgba(255, 138, 210, 0.18),
+        inset 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.mission-title {
+    font-family: 'Press Start 2P', 'DotGothic16', monospace;
+    font-size: 12px;
+    color: var(--pink);
+    margin-bottom: 10px;
+    text-shadow: 0 0 8px rgba(255, 138, 210, 0.5);
+}
+
+.mission-icons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    margin: 6px auto 10px;
+}
+
+.mission-gem {
+    width: 34px;
+    height: 34px;
+    filter: drop-shadow(0 0 10px rgba(255, 138, 210, 0.6));
+    animation: gem-pulse 1.6s ease-in-out infinite;
+}
+
+.mission-gem:nth-child(2) { animation-delay: 0.2s; }
+.mission-gem:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes gem-pulse {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50%      { transform: translateY(-4px) scale(1.08); }
+}
+
+.mission-text {
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text);
+}
+
+/* ---------- マスコット ---------- */
+#mascot {
+    text-align: center;
+    margin-top: auto;
+    animation: mascot-bob 2.4s ease-in-out infinite;
+}
+
+#mascot img {
+    display: block;
+    margin: 0 auto;
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+}
+
+@keyframes mascot-bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+}
+
+/* ---------- 中央：ゲーム盤 ---------- */
+/* 中央カラム：盤面とモード切替ボタンを縦に並べる */
+#center-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 #game-container {
     display: flex;
     justify-content: center;
+    align-items: flex-start;
+    max-width: 100%;
+    overflow-x: auto;
 }
 
-/* スマホ表示時のみ使う横向きゲージ枠（デスクトップでは非表示） */
-#mobile-gauge-container {
-    display: none;
+#mobile-gauge-container { display: none; }
+
+/* p5.js キャンバス */
+canvas {
+    display: block;
+    background: var(--panel-2);
+    border: 4px solid var(--border);
+    border-radius: 14px;
+    box-shadow:
+        inset 0 0 0 2px rgba(123, 107, 214, 0.3),
+        0 10px 30px rgba(0, 0, 0, 0.45);
 }
 
+/* ---------- 右カラム：スコア等 ---------- */
 #ui-container {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: bold;
-    min-width: 160px;
-    align-self: stretch; /* 高さをキャンバス側に合わせ、余白をゲージに使えるようにする */
+    gap: 12px;
+    width: 190px;
+    flex: 0 0 190px;
+    align-self: stretch;
 }
 
 .ui-item {
-    padding: 6px 8px;
-    background: #f8f8f8;
-    border-radius: 6px;
-    border: 1px solid #eee;
+    padding: 10px 12px;
+    background: var(--panel);
+    border: 3px solid var(--border);
+    border-radius: 12px;
+    box-shadow:
+        inset 0 0 0 2px rgba(123, 107, 214, 0.22),
+        inset 0 2px 10px rgba(0, 0, 0, 0.3);
+    text-align: center;
 }
 
-.ui-time {
-    font-size: 24px;
-    color: #c62828;
+.ui-label {
+    display: block;
+    font-family: 'Press Start 2P', 'DotGothic16', monospace;
+    font-size: 10px;
+    color: var(--cyan);
+    margin-bottom: 6px;
+    text-shadow: 0 0 8px rgba(111, 216, 255, 0.5);
 }
 
-.ui-turns {
-    font-size: 24px;
-    color: #c62828;
+.ui-value {
+    display: block;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    line-height: 1;
 }
 
 .ui-score {
-    font-size: 32px;
-    color: #333;
+    border-color: var(--border-lite);
+    background: linear-gradient(180deg, #322863, #241d47);
+}
+.ui-score .ui-label { color: var(--gold); text-shadow: 0 0 8px rgba(255, 210, 63, 0.5); }
+.ui-score .ui-value {
+    font-size: 34px;
+    color: var(--gold);
+    text-shadow: 0 3px 0 #7a4a00, 0 0 16px rgba(255, 210, 63, 0.45);
 }
 
-.ui-mode {
-    font-size: 24px;
-    text-transform: capitalize;
-    color: #555;
+.ui-mode .ui-value {
+    font-size: 18px;
+    color: var(--text);
 }
 
-/* 消去数ゲージ表示（通常時は消去数、フィーバー中は同じ枠を残り時間ゲージとして共用） */
+.ui-time .ui-value {
+    font-size: 30px;
+    color: var(--pink);
+    text-shadow: 0 0 14px rgba(255, 138, 210, 0.5);
+}
+
+.ui-turns .ui-value {
+    font-size: 30px;
+    color: var(--pink);
+    text-shadow: 0 0 14px rgba(255, 138, 210, 0.5);
+}
+
+/* ---------- タイムゲージ（縦） ---------- */
 .ui-clear {
-    /* 枠の色はスコアの枠（.ui-item既定）と同じ色に合わせる */
-    background: #f8f8f8;
-    border: 1px solid #eee;
-    color: #333;
     display: flex;
     flex-direction: column;
-    flex: 1; /* #ui-container内の余った縦スペースを全部ゲージに回す */
-    min-height: 0;
+    align-items: center;
+    flex: 1;
+    min-height: 120px;
+    padding: 10px 12px 12px;
 }
 
 .ui-clear-label {
-    margin-bottom: 4px;
+    font-family: 'Press Start 2P', 'DotGothic16', monospace;
+    font-size: 9px;
+    color: var(--pink);
+    margin-bottom: 8px;
     white-space: nowrap;
-    font-size: 14px;
+    text-shadow: 0 0 8px rgba(255, 138, 210, 0.5);
 }
 
 .ui-clear-bar-outer {
     position: relative;
-    width: 40px;
-    flex: 1; /* 親(.ui-clear)の高さいっぱいまで伸ばす */
-    min-height: 60px;
-    margin: 0 auto;
-    /* トラック全体で固定の青→オレンジのグラデーション。
-       100%溜まると一番上までオレンジ、50%ならグラデーションの中間色になる。
-       青→オレンジを直接混ぜると中間がくすむため、明るい黄色を挟んで明度を上げている */
-    background: linear-gradient(to top, #1e88e5 0%, #ffd54f 50%, #ff9800 100%);
-    border-radius: 16px;
-    border: 2px solid #333;
+    width: 42px;
+    flex: 1;
+    min-height: 80px;
+    background: linear-gradient(to top, #1e88e5 0%, #37c7ff 35%, #ffe14a 70%, #ffd23f 100%);
+    border-radius: 18px;
+    border: 3px solid #0c0a1a;
+    box-shadow:
+        inset 0 0 8px rgba(0, 0, 0, 0.5),
+        0 0 14px rgba(111, 216, 255, 0.35);
     overflow: hidden;
 }
 
-/* 未達成の割合だけ上から覆い隠すカバー。ここが伸び縮みすることで
-   下から「まだ塗られていない見た目」を作る */
 .ui-clear-bar-inner {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    background: #f8f8f8;
-    border-radius: 16px 16px 0 0;
+    background: rgba(15, 11, 34, 0.86);
+    border-radius: 14px 14px 0 0;
     transition: height 0.15s ease-out;
 }
 
-/* フィーバータイム中は同じゲージを暖色に切り替える */
+/* フィーバータイム */
 .ui-clear.ui-fever {
-    background: linear-gradient(90deg, #ff9800, #ffd54f);
-    color: #7a2e00;
-    border: 1px solid #ff9800;
+    border-color: #ff9800;
+    box-shadow: 0 0 20px rgba(255, 152, 0, 0.5);
     animation: fever-pulse 0.6s ease-in-out infinite alternate;
 }
-
+.ui-clear.ui-fever .ui-clear-label { color: #ffcf6b; }
 .ui-clear.ui-fever .ui-clear-bar-outer {
-    background: linear-gradient(to top, #ffb74d, #ff9800);
+    background: linear-gradient(to top, #ff7043, #ffb74d, #ffd54f);
 }
-
 .ui-clear.ui-fever .ui-clear-bar-inner {
-    background: rgba(122, 46, 0, 0.35);
+    background: rgba(60, 20, 0, 0.55);
     transition: height 0.1s linear;
 }
 
 @keyframes fever-pulse {
     from { transform: scale(1); }
-    to { transform: scale(1.05); }
+    to   { transform: scale(1.04); }
 }
 
-/* p5.jsキャンバス */
-canvas {
-    display: block;
-    background: #f5f5f5;
-    border: 2px solid #333;
-    border-radius: 5px;
-}
-
-/* タブバースタイル */
+/* =========================================================
+   タブバー：ピクセル風の立体ボタン
+   ========================================================= */
 .tab-bar {
-    position: fixed;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 16px;
     display: flex;
-    gap: 10px;
-    padding: 6px;
-    background: rgba(255,255,255,0.9);
-    border-radius: 8px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-    z-index: 1000;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    width: 100%;
+    min-width: 0;
 }
 
+/* 画像から切り出したボタンをそのまま使う */
 .tab {
-    padding: 10px 20px;
-    background: #ddd;
+    width: 216px;
+    flex-grow: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: 216px;
+    aspect-ratio: 270 / 132;
+    height: auto;
+    padding: 0;
     border: none;
-    border-radius: 5px;
+    background: transparent center / contain no-repeat;
+    font-size: 0;               /* 中のテキストは非表示（画像に文字が入っている） */
     cursor: pointer;
-    font-size: 16px;
-    transition: all 0.3s ease;
+    transition: transform 0.08s ease, filter 0.15s ease;
+    filter: brightness(0.82) saturate(0.9);
 }
 
-/* タッチ操作向けにタブのタッチターゲットを大きくする */
-.tab {
-    padding: 14px 22px;
-    font-size: 18px;
-}
+.tab-time { background-image: url('img/btn_time.png'); }
+.tab-turn { background-image: url('img/btn_turn.png'); }
+.tab-free { background-image: url('img/btn_free.png'); }
 
-.tab:hover {
-    background: #bbb;
-}
+.tab:hover { filter: brightness(0.95); }
+.tab:active { transform: translateY(3px); }
 
 .tab.active {
-    background: #667eea;
-    color: white;
+    filter: brightness(1.12) saturate(1.15) drop-shadow(0 0 10px rgba(255,255,255,0.45));
+    transform: translateY(-1px);
 }
 
-/* ハイスコア登録時の名前入力モーダル */
+/* =========================================================
+   名前入力モーダル
+   ========================================================= */
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(5, 3, 15, 0.7);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 2000;
 }
 
-.modal-overlay[hidden] {
-    display: none;
-}
+.modal-overlay[hidden] { display: none; }
 
 .modal-box {
-    background: white;
-    padding: 24px;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    width: min(320px, 90vw);
+    background: var(--panel);
+    padding: 26px;
+    border: 4px solid var(--border-lite);
+    border-radius: 16px;
+    box-shadow: 0 12px 44px rgba(0, 0, 0, 0.6);
+    width: min(340px, 90vw);
     text-align: center;
+    color: var(--text);
 }
 
 .modal-message {
-    margin-bottom: 14px;
-    font-size: 16px;
-    color: #222;
+    margin-bottom: 16px;
+    font-size: 15px;
 }
 
 .modal-input {
     width: 100%;
     padding: 10px 12px;
     font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    margin-bottom: 16px;
-    box-sizing: border-box;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: #14102e;
+    color: var(--text);
+    margin-bottom: 18px;
 }
 
 .modal-buttons {
     display: flex;
     justify-content: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 .modal-btn {
-    padding: 10px 20px;
+    font-family: 'Press Start 2P', 'DotGothic16', monospace;
+    font-size: 11px;
+    padding: 12px 18px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 16px;
-    font-weight: bold;
+    color: #fff;
 }
 
-.modal-btn-ok {
-    background: #667eea;
-    color: white;
-}
+.modal-btn-ok { background: #5cd94a; box-shadow: 0 4px 0 #2f8f26; }
+.modal-btn-cancel { background: #555; box-shadow: 0 4px 0 #333; }
+.modal-btn:active { transform: translateY(3px); }
 
-.modal-btn-ok:hover {
-    background: #5468d4;
-}
-
-.modal-btn-cancel {
-    background: #ddd;
-    color: #333;
-}
-
-.modal-btn-cancel:hover {
-    background: #ccc;
-}
-
-/* スマホ表示向けレイアウト：横並びだと画面幅を超えてスコア欄が
-   はみ出すため、縦積みレイアウトに切り替え、タブバー分の余白を確保する */
-@media (max-width: 700px) {
+/* =========================================================
+   スマホ表示
+   ========================================================= */
+@media (max-width: 820px) {
     body {
-        align-items: flex-start;
-        padding-bottom: 90px; /* 固定タブバーに隠れないようにする */
+        padding: 8px;
     }
 
     #container {
         flex-direction: column;
         align-items: stretch;
         width: 100%;
-        max-width: 100%;
-        padding: 12px;
+        max-width: 520px;
+        margin: 0 auto;
+        padding: 14px;
         gap: 12px;
     }
 
-    #highscores-panel {
-        order: 4;
+    #left-column {
+        order: 3;
         width: 100%;
-        border-right: none;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 12px;
+        flex: 0 0 auto;
+        flex-direction: column;
     }
 
-    #game-container {
-        order: 2;
-        display: flex;
-        justify-content: center;
-        overflow-x: auto;
-    }
+    #mascot { display: none; }
 
-    /* スコア/モード/残り時間はスクロールせずに常に見えるよう、
-       一番上に固定表示する（ゲージはここから下の専用枠に移動） */
+    #center-column { order: 2; width: 100%; flex: 0 0 auto; }
+
+    #game-container { overflow-x: auto; }
+
     #ui-container {
         order: 1;
-        position: sticky;
-        top: 0;
-        z-index: 500;
         width: 100%;
-        min-width: 0;
+        flex: 0 0 auto;
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
-        align-self: auto;
-        background: rgba(255, 255, 255, 0.97);
-        padding: 8px 6px;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
     }
 
-    /* プレイ画面の下に表示する、横向きの大きいフィーバーゲージ枠 */
+    #ui-container .ui-item { flex: 1 1 120px; }
+
+    /* 縦ゲージはスマホでは隠し、下の横ゲージ枠を使う */
+    #ui-container .ui-clear { display: none; }
+
     #mobile-gauge-container {
         display: block;
-        order: 3;
         width: 100%;
-        padding: 10px 14px;
-        background: #eee;
-        border: 2px solid #999;
+        padding: 12px 16px;
+        background: var(--panel);
+        border: 3px solid var(--pink);
         border-radius: 12px;
     }
 
-    #mobile-gauge-container .ui-item.ui-clear {
+    #mobile-gauge-container .ui-clear {
         display: block;
         width: 100%;
         flex: none;
+        min-height: 0;
         padding: 0;
-        background: transparent;
+        background: none;
         border: none;
+        box-shadow: none;
     }
 
     #mobile-gauge-container .ui-clear-bar-outer {
-        position: relative;
         width: 100%;
-        height: 40px;
+        height: 32px;
         min-height: 0;
         flex: none;
-        margin: 0;
-        background: linear-gradient(to right, #1e88e5 0%, #ffd54f 50%, #ff9800 100%);
+        background: linear-gradient(to right, #1e88e5 0%, #37c7ff 35%, #ffe14a 70%, #ffd23f 100%);
     }
 
     #mobile-gauge-container .ui-clear-bar-inner {
@@ -375,23 +565,16 @@ canvas {
         bottom: 0;
         left: auto;
         right: 0;
-        width: 100%;
+        width: 0;
         height: auto;
-        border-radius: 0 14px 14px 0;
+        border-radius: 0 12px 12px 0;
     }
 
     .tab-bar {
-        bottom: calc(10px + env(safe-area-inset-bottom));
-        left: 8px;
-        right: 8px;
-        transform: none;
-        justify-content: center;
-        flex-wrap: wrap;
-        max-width: none;
+        width: 100%;
+        max-width: 520px;
+        gap: 8px;
     }
 
-    .tab {
-        padding: 10px 14px;
-        font-size: 14px;
-    }
+    .tab { width: 30%; max-width: 160px; height: auto; aspect-ratio: 210 / 66; }
 }

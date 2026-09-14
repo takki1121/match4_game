@@ -32,7 +32,7 @@ const CLEAR_BAR_TIER_SIZE = 50; // このピース数でバーが満タンにな
 let totalCleared = 0; // これまでに消したピースの累計数
 
 // スマホ表示時はゲージをプレイ画面下の横向き専用枠に表示する
-const mobileGaugeMQ = window.matchMedia('(max-width: 700px)');
+const mobileGaugeMQ = window.matchMedia('(max-width: 820px)');
 
 let grid;
 let gameLogic;
@@ -58,7 +58,7 @@ function setup() {
     // 動的にPIECE_SIZEを計算して画面にフィットさせる
     adjustPieceSizeToWindow();
     const width = CONFIG.COLS * (CONFIG.PIECE_SIZE + CONFIG.MARGIN) + CONFIG.MARGIN;
-    const height = CONFIG.ROWS * (CONFIG.PIECE_SIZE + CONFIG.MARGIN) + CONFIG.MARGIN + 100; // UI用スペース
+    const height = CONFIG.ROWS * (CONFIG.PIECE_SIZE + CONFIG.MARGIN) + CONFIG.MARGIN; // 盤面ぴったり（スコア等はDOM側に表示）
 
     createCanvas(width, height).parent('game-container');
     
@@ -128,13 +128,18 @@ function windowResized() {
     // 画面回転やリサイズ時にピースサイズを調整
     adjustPieceSizeToWindow();
     const w = CONFIG.COLS * (CONFIG.PIECE_SIZE + CONFIG.MARGIN) + CONFIG.MARGIN;
-    const h = CONFIG.ROWS * (CONFIG.PIECE_SIZE + CONFIG.MARGIN) + CONFIG.MARGIN + 100;
+    const h = CONFIG.ROWS * (CONFIG.PIECE_SIZE + CONFIG.MARGIN) + CONFIG.MARGIN;
     resizeCanvas(w, h);
 }
 
 function adjustPieceSizeToWindow() {
     // 画面幅に合わせて PIECE_SIZE を自動決定（最小16px）
-    const availableWidth = Math.min(windowWidth, 800) - (CONFIG.MARGIN * (CONFIG.COLS + 1));
+    // デスクトップ表示ではハイスコア／ミッション欄とスコア欄が盤面の左右に並ぶため、
+    // その幅を差し引いてから盤面サイズを計算する（差し引かないと盤面がはみ出し、
+    // 下部のモード切替ボタンなどが画面外に切れてしまう）
+    const isStackedLayout = mobileGaugeMQ.matches;
+    const reservedWidth = isStackedLayout ? 60 : 560;
+    const availableWidth = Math.min(windowWidth - reservedWidth, 800) - (CONFIG.MARGIN * (CONFIG.COLS + 1));
     const maxSize = Math.floor(availableWidth / CONFIG.COLS);
     const availableHeight = Math.max(windowHeight - 140, 300) - (CONFIG.MARGIN * (CONFIG.ROWS + 1));
     const maxSizeH = Math.floor(availableHeight / CONFIG.ROWS);
@@ -164,8 +169,8 @@ function draw() {
         feverUntil = Date.now() + FEVER_DURATION_MS;
     }
 
-    // フィーバータイム中は背景を暖色にして分かりやすくする
-    background(isFeverActive() ? color(255, 240, 190) : 240);
+    // フィーバータイム中は背景を暖色にして分かりやすくする（通常時は宇宙テーマの暗い面）
+    background(isFeverActive() ? color(46, 24, 8) : color(19, 15, 38));
 
     // マッチ判定の条件をフィーバー状態に同期（3つ揃い・斜めマッチの切り替え）
     matchDetector.setFeverActive(isFeverActive());
@@ -340,18 +345,20 @@ function drawGridWithHighlight() {
             const x = col * (size + margin) + margin;
             const y = row * (size + margin) + margin;
 
-            // 背景
-            fill(200);
-            stroke(150);
-            strokeWeight(1);
-            rect(x, y, size, size);
+            // 背景（宇宙テーマの暗い角丸マス）
+            const isFever = isFeverActive();
+            fill(isFever ? color(74, 46, 20) : color(45, 38, 88));
+            stroke(isFever ? color(120, 74, 30) : color(104, 90, 180));
+            strokeWeight(2);
+            rect(x, y, size, size, 10);
 
             // ハイライト表示
             let isHighlighted = false;
             for (let pos of highlightedPositions) {
                 if (pos.col === col && pos.row === row) {
-                    fill(100, 200, 255, 150);
-                    rect(x, y, size, size);
+                    noStroke();
+                    fill(120, 210, 255, 120);
+                    rect(x, y, size, size, 8);
                     isHighlighted = true;
                     break;
                 }
@@ -385,7 +392,7 @@ function drawGridWithHighlight() {
                 if (textures && textures[piece.color]) {
                     imageMode(CENTER);
                     tint(255, visuals.alpha);
-                    image(textures[piece.color], 0, 0, size - 4, size - 4);
+                    image(textures[piece.color], 0, 0, size - 8, size - 8);
                     noTint();
                 } else {
                     // フォールバック：従来の丸描画
@@ -500,37 +507,43 @@ function highlightSelectedPiece() {
     const y = row * (size + margin) + margin;
     
     // 外枠を描画
-    stroke(255, 255, 0);
+    stroke(255, 210, 63);
     strokeWeight(3);
-    fill(255, 255, 0, 50);
-    rect(x, y, size, size);
+    fill(255, 210, 63, 55);
+    rect(x, y, size, size, 8);
+}
+
+// モード名の日本語ラベル（DOM表示用）
+const MODE_LABELS = {
+    timemode: 'タイムモード',
+    turnmode: 'ターンモード',
+    freeplay: 'フリープレイ'
+};
+
+// 秒数を mm:ss 形式に整形
+function formatClock(totalSeconds) {
+    const s = Math.max(0, Math.floor(totalSeconds));
+    const mm = String(Math.floor(s / 60)).padStart(2, '0');
+    const ss = String(s % 60).padStart(2, '0');
+    return `${mm}:${ss}`;
 }
 
 function displayUI() {
-    fill(0);
-    textSize(16);
-    const y = CONFIG.ROWS * (CONFIG.PIECE_SIZE + CONFIG.MARGIN) + CONFIG.MARGIN + 20;
-    // Score and mode on the right side to avoid overlapping the play area
-    const uiRightX = Math.max(width - 240, CONFIG.COLS * (CONFIG.PIECE_SIZE + CONFIG.MARGIN) + CONFIG.MARGIN + 20);
-    text(`Score: ${gameState.score}`, uiRightX, y);
-    text(`Mode: ${gameState.mode}`, uiRightX + 140, y);
-
-    if (gameState.mode === 'timemode') {
-        text(`Time: ${gameState.timeRemaining}s`, uiRightX, y + 20);
-    } else if (gameState.mode === 'turnmode') {
-        text(`Turns: ${gameState.turnsRemaining}`, uiRightX, y + 20);
-    }
-
+    // スコア・モード・残り時間は右側の DOM パネルに表示するため、
+    // キャンバス上では GAME OVER の演出のみ描画する
     if (!gameState.gameActive) {
-        textSize(28);
-        fill(200, 0, 0);
+        push();
+        noStroke();
+        fill(10, 8, 24, 180);
+        rect(0, 0, width, height);
         textAlign(CENTER, CENTER);
-        text('GAME OVER', width / 2, height - 40);
+        textFont('Press Start 2P');
+        textSize(Math.min(34, width / 12));
+        fill(255, 210, 63);
+        text('GAME OVER', width / 2, height / 2);
+        pop();
         textAlign(LEFT, BASELINE);
-        fill(0);
     }
-
-    // ハイスコアは外部の DOM サイドバーに表示するためここでは描画しない
 }
 
 function refreshHighscores(mode) {
@@ -556,16 +569,35 @@ function renderHighscoresToDOM() {
     if (!panel) return;
     panel.innerHTML = '';
 
-    const title = document.createElement('h3');
-    title.textContent = 'Highscores';
+    const title = document.createElement('div');
+    title.className = 'hs-title';
+    title.textContent = '♛ HIGHSCORES ♛';
     panel.appendChild(title);
 
     const list = document.createElement('ul');
+    list.className = 'hs-list';
+    const medals = ['👑', '🥈', '🥉']; // 👑 🥈 🥉
     const maxEntries = 3;
     for (let i = 0; i < maxEntries; i++) {
-        const li = document.createElement('li');
         const item = cachedHighscores[i];
-        li.textContent = item ? `${i + 1}. ${item.name} ${item.score}` : `${i + 1}. ---`;
+        const li = document.createElement('li');
+        li.className = `hs-item rank-${i + 1}`;
+
+        const rank = document.createElement('span');
+        rank.className = 'hs-rank';
+        rank.textContent = medals[i] || (i + 1);
+
+        const name = document.createElement('span');
+        name.className = 'hs-name';
+        name.textContent = item ? item.name : '---';
+
+        const score = document.createElement('span');
+        score.className = 'hs-score';
+        score.textContent = item ? Number(item.score).toLocaleString() : '0';
+
+        li.appendChild(rank);
+        li.appendChild(name);
+        li.appendChild(score);
         list.appendChild(li);
     }
     panel.appendChild(list);
@@ -578,26 +610,29 @@ function renderUIToDOM() {
     // Clear and build compact UI: Score, Mode, Time/Turns
     ui.innerHTML = '';
 
-    const scoreEl = document.createElement('div');
-    scoreEl.className = 'ui-item ui-score';
-    scoreEl.textContent = `${gameState.score}`;
-    ui.appendChild(scoreEl);
+    // 「ラベル＋値」の1パネルを作る小ヘルパー
+    const makeItem = (cls, label, value) => {
+        const el = document.createElement('div');
+        el.className = `ui-item ${cls}`;
+        const l = document.createElement('span');
+        l.className = 'ui-label';
+        l.textContent = label;
+        const v = document.createElement('span');
+        v.className = 'ui-value';
+        v.textContent = value;
+        el.appendChild(l);
+        el.appendChild(v);
+        return el;
+    };
 
-    const modeEl = document.createElement('div');
-    modeEl.className = 'ui-item ui-mode';
-    modeEl.textContent = `${gameState.mode}`;
-    ui.appendChild(modeEl);
+    const modeIcon = { timemode: '⏱', turnmode: '⚑', freeplay: '▶' }[gameState.mode] || '';
+    ui.appendChild(makeItem('ui-score', '★ SCORE ★', Number(gameState.score).toLocaleString()));
+    ui.appendChild(makeItem('ui-mode', 'MODE', `${modeIcon} ${MODE_LABELS[gameState.mode] || gameState.mode}`));
 
     if (gameState.mode === 'timemode') {
-        const timeEl = document.createElement('div');
-        timeEl.className = 'ui-item ui-time';
-        timeEl.textContent = `Time: ${gameState.timeRemaining}s`;
-        ui.appendChild(timeEl);
+        ui.appendChild(makeItem('ui-time', 'TIME', formatClock(gameState.timeRemaining)));
     } else if (gameState.mode === 'turnmode') {
-        const turnsEl = document.createElement('div');
-        turnsEl.className = 'ui-item ui-turns';
-        turnsEl.textContent = `Turns: ${gameState.turnsRemaining}`;
-        ui.appendChild(turnsEl);
+        ui.appendChild(makeItem('ui-turns', 'TURNS', gameState.turnsRemaining));
     }
 
     // 消去数ゲージとフィーバーゲージを1つのバーとして共用する。
@@ -618,6 +653,11 @@ function renderUIToDOM() {
         ratio = Math.min(totalCleared / CLEAR_BAR_TIER_SIZE, 1);
         gaugeEl.className = 'ui-item ui-clear';
     }
+
+    const gaugeLabel = document.createElement('span');
+    gaugeLabel.className = 'ui-clear-label';
+    gaugeLabel.textContent = isFeverActive() ? 'FEVER!!' : 'TIME GAUGE';
+    gaugeEl.appendChild(gaugeLabel);
 
     const barOuter = document.createElement('div');
     barOuter.className = 'ui-clear-bar-outer';

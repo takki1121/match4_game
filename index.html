@@ -7,23 +7,45 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Press+Start+2P&family=DotGothic16&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="container">
-        <aside id="highscores-panel" aria-label="highscores"></aside>
-        <div id="game-container"></div>
-        <!-- スマホ表示時のみ、プレイ画面の下に横向きのフィーバーゲージを表示する枠 -->
-        <div id="mobile-gauge-container"></div>
-        <div id="ui-container"></div>
-    </div>
+        <!-- 左カラム：ハイスコア／ミッション／マスコット -->
+        <div id="left-column">
+            <aside id="highscores-panel" aria-label="highscores"></aside>
 
-    <!-- タブバー（画面下部） -->
-    <div class="tab-bar" id="mode-tabs">
-        <button id="tab-timemode" class="tab">タイムモード</button>
-        <button id="tab-turnmode" class="tab">ターンモード</button>
-        <button id="tab-freeplay" class="tab active">フリープレイ</button>
+            <div id="mission-panel">
+                <div class="mission-title">MISSION</div>
+                <div class="mission-icons" aria-hidden="true">
+                    <img class="mission-gem" src="img/pink.png" alt="">
+                    <img class="mission-gem" src="img/pink.png" alt="">
+                    <img class="mission-gem" src="img/pink.png" alt="">
+                </div>
+                <div class="mission-text">同じ色を<br>3つ以上つなげよう！</div>
+            </div>
+
+            <div id="mascot" aria-hidden="true">
+                <img src="img/mascot.png" alt="" width="150">
+            </div>
+        </div>
+
+        <!-- 中央カラム：ゲーム盤＋モード切替ボタン -->
+        <div id="center-column">
+            <div id="game-container"></div>
+            <!-- スマホ表示時のみ、プレイ画面の下に横向きのフィーバーゲージを表示する枠 -->
+            <div id="mobile-gauge-container"></div>
+
+            <!-- モード切替ボタン（盤面の下・カード内） -->
+            <div class="tab-bar" id="mode-tabs">
+                <button id="tab-timemode" class="tab tab-time" aria-label="タイムモード"></button>
+                <button id="tab-turnmode" class="tab tab-turn" aria-label="ターンモード"></button>
+                <button id="tab-freeplay" class="tab tab-free active" aria-label="フリープレイ"></button>
+            </div>
+        </div>
+
+        <div id="ui-container"></div>
     </div>
 
     <!-- ハイスコア登録時の名前入力モーダル -->
