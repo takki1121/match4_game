@@ -48,6 +48,7 @@ let cachedHighscoresMode = null;
 let textures = [];
 let comboImages = []; // comboImages[1]～comboImages[10]：Nコンボ表示用画像
 let perfectImage; // 11コンボ以上で表示するPERFECT画像
+let pixelFont; // GAME OVER 等で使う、他のUI文字（見出し）と同じピクセルフォント
 
 // ゲームフロー制御
 let gamePhase = 'waiting'; // 'waiting', 'matching', 'animating', 'falling'
@@ -122,6 +123,12 @@ function preload() {
         comboImages[i] = loadImage(`img/${i}com.png`);
     }
     perfectImage = loadImage('img/perfect.png');
+
+    // 他のUI見出し（MISSION、TIME、TURNS等）と同じ 'Press Start 2P' を、
+    // p5.loadFont() でフォントファイルとして直接読み込む。
+    // CSS経由の文字列指定だと読み込みタイミングによってフォールバックフォントで
+    // 描画されてしまうことがあるため、確実に同じ書体になるようこちらを使う。
+    pixelFont = loadFont('https://fonts.gstatic.com/s/pressstart2p/v16/e3t4euO8T-267oIAQAu6jDQyK0nS.ttf');
 }
 
 function windowResized() {
@@ -537,8 +544,10 @@ function displayUI() {
         fill(10, 8, 24, 180);
         rect(0, 0, width, height);
         textAlign(CENTER, CENTER);
-        textFont('Press Start 2P');
-        textSize(Math.min(34, width / 12));
+        // preload() で loadFont() 済みの pixelFont を使うことで、他のUI見出しと
+        // 確実に同じ 'Press Start 2P' で描画する（未読み込み時は 'Press Start 2P' 文字列にフォールバック）。
+        textFont(pixelFont || 'Press Start 2P');
+        textSize(Math.max(30, Math.min(60, width / 3.5)));
         fill(255, 210, 63);
         text('GAME OVER', width / 2, height / 2);
         pop();

@@ -3,8 +3,10 @@ class GameState {
         this.grid = grid;
         this.mode = 'freeplay';
         this.score = 0;
-        this.timeRemaining = 120; // 秒（タイムモードの初期値）
-        this.turnsRemaining = 50; // ターンモードの初期値
+        this.initialTime = 10; // 秒（タイムモードの初期値）
+        this.initialTurns = 2; // ターンモードの初期値
+        this.timeRemaining = this.initialTime;
+        this.turnsRemaining = this.initialTurns;
         this.gameActive = true;
         this.timeStarted = false; // タイムモードのカウントが開始されたか
         this._accumulator = 0; // ミリ秒蓄積（tick用）
@@ -38,9 +40,9 @@ class GameState {
         this.gameActive = true;
         this.timeStarted = false;
         if (this.mode === 'timemode') {
-            this.timeRemaining = 120;
+            this.timeRemaining = this.initialTime;
         } else if (this.mode === 'turnmode') {
-            this.turnsRemaining = 50;
+            this.turnsRemaining = this.initialTurns;
         }
 
         // 盤面は新規生成（ユーザーが新モードで再挑戦できるように）
