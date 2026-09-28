@@ -108,6 +108,9 @@ function setup() {
     if (tabTime) tabTime.addEventListener('click', () => gameState.setMode('timemode'));
     if (tabTurn) tabTurn.addEventListener('click', () => gameState.setMode('turnmode'));
     if (tabFree) tabFree.addEventListener('click', () => gameState.setMode('freeplay'));
+
+    // 盤面の準備ができてから、コンボ画像とフォントを裏で読み込む
+    loadDeferredAssets();
 }
 
 // 画像読み込み
@@ -118,17 +121,25 @@ function preload() {
     textures[2] = loadImage('img/pink.png');
     textures[3] = loadImage('img/yellow.png');
 
+    // コンボ画像とフォントは起動を遅くしないよう preload() では待たず、
+    // setup() の最後で loadDeferredAssets() から裏で読み込む
+}
+
+/**
+ * ゲーム開始時には不要な素材を、盤面を表示したあとに裏で読み込む。
+ * 読み込み完了までは変数が undefined のままなので、描画側は未読み込みでも動くようにしてある
+ * （コンボ画像は表示をスキップ、GAME OVER は CSS の 'Press Start 2P' で描画）。
+ */
+function loadDeferredAssets() {
     // コンボ数表示用画像（1com.png ～ 10com.png、11コンボ以上はperfect.pngを表示）
     for (let i = 1; i <= 10; i++) {
-        comboImages[i] = loadImage(`img/${i}com.png`);
+        loadImage(`img/${i}com.png`, img => { comboImages[i] = img; });
     }
-    perfectImage = loadImage('img/perfect.png');
+    loadImage('img/perfect.png', img => { perfectImage = img; });
 
-    // 他のUI見出し（MISSION、TIME、TURNS等）と同じ 'Press Start 2P' を、
-    // p5.loadFont() でフォントファイルとして直接読み込む。
-    // CSS経由の文字列指定だと読み込みタイミングによってフォールバックフォントで
-    // 描画されてしまうことがあるため、確実に同じ書体になるようこちらを使う。
-    pixelFont = loadFont('https://fonts.gstatic.com/s/pressstart2p/v16/e3t4euO8T-267oIAQAu6jDQyK0nS.ttf');
+    // 他のUI見出し（MISSION、TIME、TURNS等）と同じ 'Press Start 2P' を
+    // game/fonts に置いたフォントファイルから読み込む
+    loadFont('fonts/PressStart2P-Regular.ttf', font => { pixelFont = font; });
 }
 
 function windowResized() {
@@ -544,7 +555,7 @@ function displayUI() {
         fill(10, 8, 24, 180);
         rect(0, 0, width, height);
         textAlign(CENTER, CENTER);
-        // preload() で loadFont() 済みの pixelFont を使うことで、他のUI見出しと
+        // loadDeferredAssets() で読み込んだ pixelFont を使うことで、他のUI見出しと
         // 確実に同じ 'Press Start 2P' で描画する（未読み込み時は 'Press Start 2P' 文字列にフォールバック）。
         textFont(pixelFont || 'Press Start 2P');
         textSize(Math.max(30, Math.min(60, width / 3.5)));
