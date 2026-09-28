@@ -105,6 +105,9 @@ function setup() {
     const tabTime = document.getElementById('tab-timemode');
     const tabTurn = document.getElementById('tab-turnmode');
     const tabFree = document.getElementById('tab-freeplay');
+    [tabTime, tabTurn, tabFree].forEach(tab => {
+        if (tab) tab.addEventListener('click', () => SoundManager.play('tab'));
+    });
     if (tabTime) tabTime.addEventListener('click', () => gameState.setMode('timemode'));
     if (tabTurn) tabTurn.addEventListener('click', () => gameState.setMode('turnmode'));
     if (tabFree) tabFree.addEventListener('click', () => gameState.setMode('freeplay'));
@@ -131,6 +134,7 @@ function setupOpeningScreen() {
 
     screen.querySelectorAll('.opening-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+            SoundManager.play('start');
             gameState.setMode(btn.dataset.mode);
             screen.classList.add('is-hidden');
         });
@@ -214,6 +218,7 @@ function draw() {
         feverPendingUntil = 0;
         totalCleared = 0;
         feverUntil = Date.now() + FEVER_DURATION_MS;
+        SoundManager.play('fever');
     }
 
     // フィーバータイム中は背景を暖色にして分かりやすくする（通常時は宇宙テーマの暗い面）
@@ -246,6 +251,21 @@ function draw() {
     // UI情報の表示
     displayUI();
     renderUIToDOM();
+
+    updateBgm();
+}
+
+/**
+ * 画面の状態に合わせて BGM を切り替える
+ * オープニング → opening、フィーバー中 → fever、GAME OVER → 無音、それ以外 → game
+ */
+function updateBgm() {
+    let track;
+    if (isOpeningScreenVisible()) track = 'opening';
+    else if (!gameState.gameActive) track = null;
+    else if (isFeverActive()) track = 'fever';
+    else track = 'game';
+    BgmManager.setTrack(track);
 }
 
 /**
@@ -324,6 +344,9 @@ function updateGameState() {
 
                 chainLevel++;
 
+                // 消える音は連鎖するごとに少しずつ高くする（上限あり）
+                SoundManager.play('clear', { rate: Math.min(1 + (chainLevel - 1) * 0.08, 1.8) });
+
                 // 連鎖が2以上ならコンボ扱いにして派手な演出
                 if (chainLevel > 1) {
                     const centerX = width / 2;
@@ -337,6 +360,8 @@ function updateGameState() {
                         count: chainLevel,
                         until: Date.now() + 1200
                     };
+                    // 11コンボ以上は PERFECT 画像に合わせて別の音
+                    SoundManager.play(chainLevel >= 11 ? 'perfect' : 'combo');
                 }
 
                 // 一旦空白を保ったまま短い待ち時間を設け、その後落下処理を行う
@@ -741,6 +766,7 @@ function mousePressed() {
     // クリックされたピースを一瞬縮ませて「押した感」を出す
     if (inputManager.dragStartCol !== null && inputManager.dragStartRow !== null) {
         animationManager.addPressAnimation(inputManager.dragStartCol, inputManager.dragStartRow);
+        SoundManager.play('select');
     }
 
     if (swapAction) {
@@ -908,6 +934,7 @@ function executeSwap(fromCol, fromRow, toCol, toRow, type) {
     
     if (success) {
         console.log(`Swap successful: (${fromCol}, ${fromRow}) ↔ (${toCol}, ${toRow})`);
+        SoundManager.play('swap');
 
         // 2つのピースがそれぞれの新しい位置へスライドするアニメーション
         animationManager.addSwapAnimation(toCol, toRow, fromCol, fromRow);
@@ -949,6 +976,8 @@ function showNameInputModal(message, defaultName) {
         messageEl.textContent = message;
         inputEl.value = defaultName;
         modal.hidden = false;
+        // GAME OVER のゴングと重ならないよう、少し遅らせてハイスコアの音を鳴らす
+        setTimeout(() => SoundManager.play('highscore'), 900);
         inputEl.focus();
         inputEl.select();
 
@@ -959,11 +988,13 @@ function showNameInputModal(message, defaultName) {
             inputEl.removeEventListener('keydown', onKeydown);
         }
         function onOk() {
+            SoundManager.play('ok');
             const value = inputEl.value.trim();
             cleanup();
             resolve(value || defaultName);
         }
         function onCancel() {
+            SoundManager.play('cancel');
             cleanup();
             resolve(null);
         }

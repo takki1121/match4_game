@@ -62,6 +62,10 @@ class GameState {
             const seconds = Math.floor(this._accumulator / 1000);
             this.timeRemaining = Math.max(0, this.timeRemaining - seconds);
             this._accumulator -= seconds * 1000;
+            // 残り5秒からはカウントダウン音を鳴らす
+            if (this.timeRemaining > 0 && this.timeRemaining <= 5 && window.SoundManager) {
+                SoundManager.play('countdown');
+            }
             if (this.timeRemaining === 0) {
                 this._endGame();
             }
@@ -84,6 +88,7 @@ class GameState {
     _endGame() {
         if (!this.gameActive) return;
         this.gameActive = false;
+        if (window.SoundManager) SoundManager.play('gameover');
         if (typeof window.onGameEnd === 'function') {
             try {
                 window.onGameEnd(this);
