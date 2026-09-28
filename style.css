@@ -426,6 +426,125 @@ canvas {
 }
 
 /* =========================================================
+   オープニング画面
+   ========================================================= */
+.opening-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    overflow-y: auto;
+    background: rgba(8, 6, 20, 0.82) url('img/haikei.png') center / cover no-repeat;
+    background-blend-mode: multiply;
+    transition: opacity 0.35s ease;
+}
+
+.opening-overlay.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.opening-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: min(760px, 100%);
+    padding: 28px 22px 30px;
+    text-align: center;
+    background: linear-gradient(160deg, #241c46 0%, #1a1436 55%, #211a44 100%);
+    border: 4px solid var(--border-lite);
+    border-radius: 18px;
+    box-shadow:
+        0 0 0 4px var(--space-0),
+        0 0 0 8px #2f2661,
+        0 18px 50px rgba(0, 0, 0, 0.55),
+        inset 0 0 40px rgba(80, 40, 160, 0.35);
+}
+
+.opening-mascot {
+    width: 110px;
+    height: auto;
+    margin-bottom: 10px;
+    animation: opening-float 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes opening-float {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-8px); }
+}
+
+.opening-title {
+    font-family: 'Press Start 2P', 'DotGothic16', monospace;
+    font-size: 34px;
+    font-weight: normal;
+    line-height: 1.4;
+    color: var(--gold);
+    letter-spacing: 2px;
+    text-shadow: 0 4px 0 #7a4a00, 0 0 18px rgba(255, 210, 63, 0.55);
+}
+
+.opening-title span {
+    font-size: 22px;
+    color: var(--pink);
+    text-shadow: 0 3px 0 #7a1f5a, 0 0 14px rgba(255, 138, 210, 0.5);
+}
+
+.opening-sub {
+    font-family: 'Press Start 2P', 'DotGothic16', monospace;
+    font-size: 12px;
+    color: var(--cyan);
+    margin: 22px 0 16px;
+    animation: opening-blink 1.2s steps(2, start) infinite;
+}
+
+@keyframes opening-blink {
+    to { visibility: hidden; }
+}
+
+.opening-modes {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    width: 100%;
+}
+
+.opening-mode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* .tab の見た目（画像ボタン）を流用し、常に明るく表示する */
+.opening-btn {
+    width: 100%;
+    filter: brightness(1.05) saturate(1.1);
+}
+
+.opening-btn:hover {
+    filter: brightness(1.18) saturate(1.2) drop-shadow(0 0 10px rgba(255,255,255,0.5));
+    transform: translateY(-2px);
+}
+
+.opening-desc {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-dim);
+}
+
+@media (max-width: 820px) {
+    .opening-title { font-size: 24px; }
+    .opening-title span { font-size: 16px; }
+    .opening-modes { flex-direction: column; align-items: center; gap: 12px; }
+    .opening-mode { width: min(260px, 100%); flex: 0 0 auto; }
+}
+
+/* =========================================================
    名前入力モーダル
    ========================================================= */
 .modal-overlay {

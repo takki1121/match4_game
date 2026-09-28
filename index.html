@@ -48,6 +48,29 @@
         <div id="ui-container"></div>
     </div>
 
+    <!-- オープニング画面（起動時に表示し、モードを選ぶとゲーム開始） -->
+    <div id="opening-screen" class="opening-overlay">
+        <div class="opening-box">
+            <img class="opening-mascot" src="img/mascot.png" alt="">
+            <h1 class="opening-title">MATCH 4<br><span>PUZZLE</span></h1>
+            <p class="opening-sub">SELECT MODE</p>
+            <div class="opening-modes">
+                <div class="opening-mode">
+                    <button class="tab tab-time opening-btn" data-mode="timemode" aria-label="タイムモード"></button>
+                    <p class="opening-desc" id="opening-desc-time">時間内にハイスコアを目指そう</p>
+                </div>
+                <div class="opening-mode">
+                    <button class="tab tab-turn opening-btn" data-mode="turnmode" aria-label="ターンモード"></button>
+                    <p class="opening-desc" id="opening-desc-turn">限られた手数でハイスコアを目指そう</p>
+                </div>
+                <div class="opening-mode">
+                    <button class="tab tab-free opening-btn" data-mode="freeplay" aria-label="フリープレイ"></button>
+                    <p class="opening-desc">時間も手数も無制限でのんびり遊ぼう</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ハイスコア登録時の名前入力モーダル -->
     <div id="name-input-modal" class="modal-overlay" hidden>
         <div class="modal-box">

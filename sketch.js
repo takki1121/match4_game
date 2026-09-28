@@ -109,8 +109,37 @@ function setup() {
     if (tabTurn) tabTurn.addEventListener('click', () => gameState.setMode('turnmode'));
     if (tabFree) tabFree.addEventListener('click', () => gameState.setMode('freeplay'));
 
+    setupOpeningScreen();
+
     // 盤面の準備ができてから、コンボ画像とフォントを裏で読み込む
     loadDeferredAssets();
+}
+
+/**
+ * オープニング画面：モードボタンを押すとそのモードでゲームを始める。
+ * ゲーム中のモード切替ボタン（盤面の下）はこれまで通り使える。
+ */
+function setupOpeningScreen() {
+    const screen = document.getElementById('opening-screen');
+    if (!screen) return;
+
+    // 説明文に GameState の初期値を反映（値を変えても説明がずれないように）
+    const descTime = document.getElementById('opening-desc-time');
+    const descTurn = document.getElementById('opening-desc-turn');
+    if (descTime) descTime.textContent = `${gameState.initialTime}秒以内にハイスコアを目指そう`;
+    if (descTurn) descTurn.textContent = `${gameState.initialTurns}手以内にハイスコアを目指そう`;
+
+    screen.querySelectorAll('.opening-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            gameState.setMode(btn.dataset.mode);
+            screen.classList.add('is-hidden');
+        });
+    });
+}
+
+function isOpeningScreenVisible() {
+    const screen = document.getElementById('opening-screen');
+    return !!screen && !screen.classList.contains('is-hidden');
 }
 
 // 画像読み込み
@@ -703,6 +732,8 @@ function renderUIToDOM() {
 }
 
 function mousePressed() {
+    // オープニング画面を表示中は盤面を操作させない（ボタンのクリックはそのまま通す）
+    if (isOpeningScreenVisible()) return true;
     if (!gameState.gameActive || gamePhase !== 'waiting') return false;
     
     const swapAction = inputManager.handleMousePressed(mouseX, mouseY);
