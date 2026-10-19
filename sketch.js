@@ -121,6 +121,7 @@ function setup() {
     if (tabFree) tabFree.addEventListener('click', () => gameState.setMode('freeplay'));
 
     setupOpeningScreen();
+    setupLayoutRefit();
 
     // 盤面の準備ができてから、コンボ画像とフォントを裏で読み込む
     loadDeferredAssets();
@@ -145,6 +146,8 @@ function setupOpeningScreen() {
             SoundManager.play('start');
             gameState.setMode(btn.dataset.mode);
             screen.classList.add('is-hidden');
+            // ゲーム画面が表示されたタイミングでも盤面の大きさを合わせ直す
+            requestAnimationFrame(fitCanvasToLayout);
         });
     });
 }
@@ -185,10 +188,45 @@ function loadDeferredAssets() {
 
 function windowResized() {
     // 画面回転やリサイズ時にピースサイズを調整
+    fitCanvasToLayout();
+}
+
+/**
+ * 現在のレイアウトに合わせてピースサイズとキャンバスの大きさを計算し直す（大きさが変わるときだけ resize）
+ */
+function fitCanvasToLayout() {
     adjustPieceSizeToWindow();
     const w = CONFIG.COLS * (CONFIG.PIECE_SIZE + CONFIG.MARGIN) + CONFIG.MARGIN;
     const h = CONFIG.ROWS * (CONFIG.PIECE_SIZE + CONFIG.MARGIN) + CONFIG.MARGIN;
-    resizeCanvas(w, h);
+    if (w !== width || h !== height) resizeCanvas(w, h);
+}
+
+/**
+ * スマホでは起動直後にレイアウト（画面幅・アドレスバー・フォント等）が確定しておらず、
+ * setup() 時点の計算だと盤面が小さくなることがある。
+ * レイアウトが落ち着いたタイミングや中央カラムの幅が変わったときに計算し直して、最初から大きく表示する
+ */
+function setupLayoutRefit() {
+    requestAnimationFrame(fitCanvasToLayout);
+    setTimeout(fitCanvasToLayout, 300);
+    setTimeout(fitCanvasToLayout, 1000);
+    window.addEventListener('load', fitCanvasToLayout);
+    window.addEventListener('orientationchange', () => setTimeout(fitCanvasToLayout, 300));
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCanvasToLayout);
+
+    // スマホ表示では中央カラムの幅は盤面の大きさに左右されないので、幅の変化を監視して追従する
+    // （PC表示は盤面の大きさで中央カラムの幅が変わり計算がループするため監視しない）
+    const centerColumn = document.getElementById('center-column');
+    if (centerColumn && window.ResizeObserver) {
+        let lastWidth = centerColumn.clientWidth;
+        new ResizeObserver(() => {
+            if (!mobileGaugeMQ.matches) return;
+            const w = centerColumn.clientWidth;
+            if (w === lastWidth) return;
+            lastWidth = w;
+            fitCanvasToLayout();
+        }).observe(centerColumn);
+    }
 }
 
 function adjustPieceSizeToWindow() {
@@ -271,6 +309,8 @@ function draw() {
     gameState.endTurnModeIfReady(
         gamePhase !== 'waiting' || isComboEffectActive() || isFeverActive() || isFeverPending()
     );
+    // タイムモードで時間切れになったら、続いている連鎖（コンボ）とその演出が終わってから GAME OVER にする
+    gameState.endTimeModeIfReady(gamePhase !== 'waiting' || isComboEffectActive());
     
     // ⑥コンボ時の画面の揺れを適用してグリッドを描画
     const shake = animationManager.getScreenShakeOffset();
@@ -801,7 +841,7 @@ function renderUIToDOM() {
 function mousePressed() {
     // オープニング画面を表示中は盤面を操作させない（ボタンのクリックはそのまま通す）
     if (isOpeningScreenVisible()) return true;
-    if (!gameState.gameActive || gamePhase !== 'waiting') return false;
+    if (!gameState.gameActive || gameState.isTimeUp() || gamePhase !== 'waiting') return false;
     
     const swapAction = inputManager.handleMousePressed(mouseX, mouseY);
 
@@ -936,7 +976,7 @@ function touchEnded(event) {
 }
 
 function mouseDragged() {
-    if (!gameState.gameActive || !inputManager.isDragging || gamePhase !== 'waiting') return false;
+    if (!gameState.gameActive || gameState.isTimeUp() || !inputManager.isDragging || gamePhase !== 'waiting') return false;
     
     const swapAction = inputManager.handleMouseDragged(mouseX, mouseY);
     

@@ -67,9 +67,8 @@ class GameState {
             if (this.timeRemaining > 0 && this.timeRemaining <= 5 && window.SoundManager) {
                 SoundManager.play('countdown');
             }
-            if (this.timeRemaining === 0) {
-                this._endGame();
-            }
+            // 0秒になってもすぐには終了しない（続いているコンボが終わるのを待つ）。
+            // 終了判定は sketch.js から endTimeModeIfReady() で行う
         }
     }
 
@@ -92,6 +91,18 @@ class GameState {
         if (this.mode !== 'turnmode' || !this.gameActive) return;
         if (this.turnsRemaining > 0 || isBusy) return;
         this._endGame();
+    }
+
+    // タイムモードで時間切れになり、続いていたコンボもすべて終わっていればゲーム終了
+    endTimeModeIfReady(isBusy) {
+        if (this.mode !== 'timemode' || !this.gameActive) return;
+        if (!this.isTimeUp() || isBusy) return;
+        this._endGame();
+    }
+
+    // タイムモードで時間切れかどうか（時間切れ後はコンボの終了待ち中でも新しい操作を受け付けない）
+    isTimeUp() {
+        return this.mode === 'timemode' && this.timeStarted && this.timeRemaining === 0;
     }
 
     _endGame() {
