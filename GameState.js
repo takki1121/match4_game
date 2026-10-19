@@ -3,8 +3,8 @@ class GameState {
         this.grid = grid;
         this.mode = 'freeplay';
         this.score = 0;
-        this.initialTime = 10; // 秒（タイムモードの初期値）
-        this.initialTurns = 7; // ターンモードの初期値
+        this.initialTime = 60; // 秒（タイムモードの初期値）
+        this.initialTurns = 50; // ターンモードの初期値
         this.timeRemaining = this.initialTime;
         this.turnsRemaining = this.initialTurns;
         this.gameActive = true;
