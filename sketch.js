@@ -99,6 +99,14 @@ function setup() {
         feverUntil = 0; // モード切替・リセット時はフィーバータイムも解除
         feverPendingUntil = 0; // フィーバー移行待ちも解除
         totalCleared = 0; // 消去数バーもリセット
+        window.currentCombo = null; // コンボ表示も消す
+        selectedPiece = null; // 選択中のピースも解除
+        highlightedPositions = [];
+        if (inputManager) {
+            inputManager.handleMouseReleased();
+            inputManager.firstClickCol = null;
+            inputManager.firstClickRow = null;
+        }
     };
 
     // タブイベント設定
@@ -185,11 +193,27 @@ function windowResized() {
 
 function adjustPieceSizeToWindow() {
     // 画面幅に合わせて PIECE_SIZE を自動決定（最小16px）
+    const isStackedLayout = mobileGaugeMQ.matches;
+
+    if (isStackedLayout) {
+        // スマホ表示：盤面を画面幅いっぱいまで大きくする。
+        // マス同士の隙間を狭くし、実際に使える中央カラムの幅（キャンバス枠 2px×2 を除く）から計算する
+        CONFIG.MARGIN = 3;
+        const centerColumn = document.getElementById('center-column');
+        const columnWidth = (centerColumn && centerColumn.clientWidth) || (windowWidth - 8);
+        const availableWidth = columnWidth - 4 - (CONFIG.MARGIN * (CONFIG.COLS + 1));
+        // 縦は画面の 80% までに収め、スコア欄・ボタンも見えるようにする
+        const availableHeight = windowHeight * 0.8 - (CONFIG.MARGIN * (CONFIG.ROWS + 1));
+        const size = Math.floor(Math.min(availableWidth / CONFIG.COLS, availableHeight / CONFIG.ROWS));
+        CONFIG.PIECE_SIZE = Math.max(16, size);
+        return;
+    }
+
     // デスクトップ表示ではハイスコア／ミッション欄とスコア欄が盤面の左右に並ぶため、
     // その幅を差し引いてから盤面サイズを計算する（差し引かないと盤面がはみ出し、
     // 下部のモード切替ボタンなどが画面外に切れてしまう）
-    const isStackedLayout = mobileGaugeMQ.matches;
-    const reservedWidth = isStackedLayout ? 60 : 560;
+    CONFIG.MARGIN = 10;
+    const reservedWidth = 560;
     const availableWidth = Math.min(windowWidth - reservedWidth, 800) - (CONFIG.MARGIN * (CONFIG.COLS + 1));
     const maxSize = Math.floor(availableWidth / CONFIG.COLS);
     const availableHeight = Math.max(windowHeight - 140, 300) - (CONFIG.MARGIN * (CONFIG.ROWS + 1));
@@ -210,6 +234,15 @@ function isFeverActive() {
  */
 function isFeverPending() {
     return feverPendingUntil > 0 && Date.now() < feverPendingUntil;
+}
+
+/**
+ * コンボの演出（アニメーション・画面パルス・Nコンボ画像）を表示している最中かどうか
+ */
+function isComboEffectActive() {
+    if (animationManager.isAnimating()) return true;
+    if (animationManager.getComboPulse()) return true;
+    return !!(window.currentCombo && Date.now() < window.currentCombo.until);
 }
 
 function draw() {
@@ -233,6 +266,11 @@ function draw() {
     // ゲーム状態の進行（タイマーなど）
     gameState.tick(deltaTime);
     updateGameState();
+    // ターンモードで最後の1手を終えたら、連鎖（コンボ）とその演出が止まり、フィーバータイム
+    // （移行待ち含む）も終わってから GAME OVER にする（フィーバー中は手数0でもピースを動かせる）
+    gameState.endTurnModeIfReady(
+        gamePhase !== 'waiting' || isComboEffectActive() || isFeverActive() || isFeverPending()
+    );
     
     // ⑥コンボ時の画面の揺れを適用してグリッドを描画
     const shake = animationManager.getScreenShakeOffset();
@@ -612,7 +650,11 @@ function displayUI() {
         // loadDeferredAssets() で読み込んだ pixelFont を使うことで、他のUI見出しと
         // 確実に同じ 'Press Start 2P' で描画する（未読み込み時は 'Press Start 2P' 文字列にフォールバック）。
         textFont(pixelFont || 'Press Start 2P');
-        textSize(Math.max(30, Math.min(60, width / 3.5)));
+        // 盤面の幅の 90% に収まる大きさにする（スマホの小さい盤面でも文字が切れないように）
+        const baseSize = 60;
+        textSize(baseSize);
+        const fitSize = baseSize * (width * 0.9) / textWidth('GAME OVER');
+        textSize(Math.min(baseSize, fitSize));
         fill(255, 210, 63);
         text('GAME OVER', width / 2, height / 2);
         pop();
@@ -1014,11 +1056,13 @@ window.onGameEnd = function(state) {
     if (!window.HighscoreAPI) return;
     const mode = state.mode;
     if (mode !== 'timemode' && mode !== 'turnmode') return;
+    // スコアはこの時点の値を控えておく（名前入力中にリセット等で gameState.score が 0 に戻っても正しく記録するため）
+    const finalScore = state.score;
 
     HighscoreAPI.fetchHighscores(mode).then(res => {
         const list = res.highscores || [];
         const lowest = list[list.length - 1];
-        const qualifies = list.length < 3 || state.score > (lowest ? lowest.score : -Infinity);
+        const qualifies = list.length < 3 || finalScore > (lowest ? lowest.score : -Infinity);
         if (!qualifies) return;
 
         // 名前を尋ねて登録（簡易実装）。キャンセルされたら匿名 'anonymous' を利用
@@ -1026,10 +1070,10 @@ window.onGameEnd = function(state) {
         showNameInputModal('ハイスコア！名前を入力してください', defaultName).then(name => {
             if (name === null) name = 'anonymous';
 
-            HighscoreAPI.submitHighscore(mode, name, state.score)
+            HighscoreAPI.submitHighscore(mode, name, finalScore)
                 .then(() => {
-                    // DOM を更新
-                    if (typeof renderHighscoresToDOM === 'function') renderHighscoresToDOM();
+                    // 保存した内容を読み直して表示を更新（再読み込みしなくても反映されるように）
+                    refreshHighscores(gameState.mode);
                 })
                 .catch(err => console.warn('Failed to submit highscore', err));
         });
@@ -1040,20 +1084,24 @@ window.onGameEnd = function(state) {
 window.onLeaveFreeplay = function(state) {
     if (!window.HighscoreAPI) return;
     const mode = 'freeplay';
+    // スコアはこの時点の値を控えておく（この直後にモード切替で gameState.score が 0 にリセットされるため）
+    const finalScore = state.score;
+    // スコア0（まだ遊んでいない）なら登録しない
+    if (finalScore <= 0) return;
 
     HighscoreAPI.fetchHighscores(mode).then(res => {
         const list = res.highscores || [];
         const lowest = list[list.length - 1];
-        const qualifies = list.length < 3 || state.score > (lowest ? lowest.score : -Infinity);
+        const qualifies = list.length < 3 || finalScore > (lowest ? lowest.score : -Infinity);
         if (!qualifies) return;
 
         const defaultName = 'player';
         showNameInputModal('フリープレイのスコアがランキング入りしました。名前を入力してください', defaultName).then(name => {
             if (name === null) name = 'anonymous';
 
-            HighscoreAPI.submitHighscore(mode, name, state.score)
+            HighscoreAPI.submitHighscore(mode, name, finalScore)
                 .then(() => {
-                    if (typeof renderHighscoresToDOM === 'function') renderHighscoresToDOM();
+                    refreshHighscores(gameState.mode);
                 })
                 .catch(err => console.warn('Failed to submit freeplay highscore', err));
         });

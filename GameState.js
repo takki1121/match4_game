@@ -4,7 +4,7 @@ class GameState {
         this.mode = 'freeplay';
         this.score = 0;
         this.initialTime = 10; // 秒（タイムモードの初期値）
-        this.initialTurns = 2; // ターンモードの初期値
+        this.initialTurns = 7; // ターンモードの初期値
         this.timeRemaining = this.initialTime;
         this.turnsRemaining = this.initialTurns;
         this.gameActive = true;
@@ -13,10 +13,10 @@ class GameState {
     }
 
     setMode(mode) {
-        if (this.mode === mode) return;
+        // 同じモードのボタンを押した場合は、そのモードのまま盤面・スコアをリセットする
 
-        // フリープレイから別モードに切り替える際、必要ならフリープレイのスコアを保存するためのフックを呼ぶ
-        if (this.mode === 'freeplay' && mode !== 'freeplay') {
+        // フリープレイを抜ける（別モードへの切替・フリープレイのリセット）際、必要ならフリープレイのスコアを保存するためのフックを呼ぶ
+        if (this.mode === 'freeplay') {
             if (typeof window.onLeaveFreeplay === 'function') {
                 try {
                     window.onLeaveFreeplay(this);
@@ -35,10 +35,11 @@ class GameState {
     }
 
     resetForMode() {
-        // モード切替時はスコアをリセットし、盤面とカウントを初期化する
+        // モード切替・リセット時はスコアをリセットし、盤面とカウントを初期化する
         this.score = 0;
         this.gameActive = true;
         this.timeStarted = false;
+        this._accumulator = 0;
         if (this.mode === 'timemode') {
             this.timeRemaining = this.initialTime;
         } else if (this.mode === 'turnmode') {
@@ -81,8 +82,16 @@ class GameState {
 
     consumeTurn() {
         if (this.mode !== 'turnmode' || !this.gameActive) return;
+        // 手数が0になってもすぐには終了しない（連鎖やフィーバータイムが終わるのを待つ）。
+        // 終了判定は sketch.js から endTurnModeIfReady() で行う
         this.turnsRemaining = Math.max(0, this.turnsRemaining - 1);
-        if (this.turnsRemaining === 0) this._endGame();
+    }
+
+    // ターンモードで手数を使い切っていて、連鎖・フィーバータイムがすべて終わっていればゲーム終了
+    endTurnModeIfReady(isBusy) {
+        if (this.mode !== 'turnmode' || !this.gameActive) return;
+        if (this.turnsRemaining > 0 || isBusy) return;
+        this._endGame();
     }
 
     _endGame() {
